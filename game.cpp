@@ -117,26 +117,8 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
     return ((line_end.x - line_start.x) * (point.y - line_start.y) - (line_end.y - line_start.y) * (point.x - line_start.x)) < 0;
 }
 
-// -----------------------------------------------------------
-// Update the game state:
-// Move all objects
-// Update sprite frames
-// Collision detection
-// Targeting etc..
-// -----------------------------------------------------------
-void Game::update(float deltaTime)
-{
-    //Calculate the route to the destination for each tank using BFS
-    //Initializing routes here so it gets counted for performance..
-    if (frame_count == 0)
-    {
-        for (Tank& t : tanks)
-        {
-            t.set_route(background_terrain.get_route(t, t.target));
-        }
-    }
 
-    //Check tank collision and nudge tanks away from each other
+void Tmpl8::Game::check_collision() {
     for (Tank& tank : tanks)
     {
         if (tank.active)
@@ -158,6 +140,30 @@ void Game::update(float deltaTime)
             }
         }
     }
+}
+
+
+// -----------------------------------------------------------
+// Update the game state:
+// Move all objects
+// Update sprite frames
+// Collision detection
+// Targeting etc..
+// -----------------------------------------------------------
+void Game::update(float deltaTime)
+{
+    //Calculate the route to the destination for each tank using BFS
+    //Initializing routes here so it gets counted for performance..
+    if (frame_count == 0)
+    {
+        for (Tank& t : tanks)
+        {
+            t.set_route(background_terrain.get_route(t, t.target));
+        }
+    }
+
+    //Check tank collision and nudge tanks away from each other
+    check_collision();
 
     //Update tanks
     for (Tank& tank : tanks)
