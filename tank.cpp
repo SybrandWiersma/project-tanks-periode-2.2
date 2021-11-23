@@ -5,6 +5,7 @@
 namespace Tmpl8
 {
 Tank::Tank(
+    int id,
     float pos_x,
     float pos_y,
     allignments allignment,
@@ -15,7 +16,8 @@ Tank::Tank(
     float collision_radius,
     int health,
     float max_speed)
-    : position(pos_x, pos_y),
+    : id(id),
+      position(pos_x, pos_y),
       allignment(allignment),
       target(tar_x, tar_y),
       health(health),
