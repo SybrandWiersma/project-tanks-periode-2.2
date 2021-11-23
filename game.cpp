@@ -41,6 +41,8 @@ const static vec2 rocket_size(6, 6);
 const static float tank_radius = 3.f;
 const static float rocket_radius = 5.f;
 
+static vector<Tank> chunks[200][200];
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -66,14 +68,29 @@ void Game::init()
     for (int i = 0; i < num_tanks_blue; i++)
     {
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
-        tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        tanks.push_back(Tank(i, position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
     {
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
-        tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        tanks.push_back(Tank(i + num_tanks_blue, position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
     }
+
+    //Sort tanks per chunk
+    for (Tank& tank : tanks)
+    {
+        vec2 position = tank.get_position();
+        int x = position.x / 10;
+        int y = position.y / 10;
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                chunks[x - i][y - j].push_back(tank);
+            }
+        }
+    }
+
+
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
     particle_beams.push_back(Particle_beam(vec2(64, 64), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -119,13 +136,22 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 
 
 void Tmpl8::Game::check_collision() {
+    
+
+
+
+
     for (Tank& tank : tanks)
     {
         if (tank.active)
         {
-            for (Tank& other_tank : tanks)
+            vec2 position = tank.get_position();
+            int x = position.x / 10;
+            int y = position.y / 10;
+
+            for (Tank& other_tank : chunks[x][y])
             {
-                if (&tank == &other_tank || !other_tank.active) continue;
+                if (tank.id == other_tank.id || !other_tank.active) continue;
 
                 vec2 dir = tank.get_position() - other_tank.get_position();
                 float dir_squared_len = dir.sqr_length();
@@ -164,14 +190,58 @@ void Game::update(float deltaTime)
 
     //Check tank collision and nudge tanks away from each other
     check_collision();
+    /*for (Tank& tank : tanks)
+    {
+        if (tank.active)
+        {
+            for (Tank& other_tank : tanks)
+            {
+                if (&tank == &other_tank || !other_tank.active) continue;
+
+                vec2 dir = tank.get_position() - other_tank.get_position();
+                float dir_squared_len = dir.sqr_length();
+
+                float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
+                col_squared_len *= col_squared_len;
+
+                if (dir_squared_len < col_squared_len)
+                {
+                    tank.push(dir.normalized(), 1.f);
+                }
+            }
+        }
+    }
+    */
+    
+    
 
     //Update tanks
     for (Tank& tank : tanks)
     {
         if (tank.active)
         {
+            // Before position
+            vec2 position_before = tank.get_position();
+
             //Move tanks according to speed and nudges (see above) also reload
-            tank.tick(background_terrain);
+            tank.tick(background_terrain, chunks);
+
+            vec2 position_after = tank.get_position();
+            //Check if tank moved chunk
+            int chunk_x_before = position_before.x / 10;
+            int chunk_y_before = position_before.y / 10;
+
+            int chunk_x_after = position_after.x / 10;
+            int chunk_y_after = position_after.y / 10;
+
+            int x_difference = chunk_x_after - chunk_x_before;
+            int y_difference = chunk_y_after - chunk_y_before;
+
+            if (x_difference != 0) {
+
+            }
+            
+
 
             //Shoot at closest target if reloaded
             if (tank.rocket_reloaded())
@@ -190,7 +260,7 @@ void Game::update(float deltaTime)
     {
         smoke.tick();
     }
-
+        
     //Calculate "forcefield" around active tanks
     forcefield_hull.clear();
 
@@ -264,7 +334,7 @@ void Game::update(float deltaTime)
                 rocket.active = false;
                 break;
             }
-        }
+        }   
     }
 
     //Disable rockets if they collide with the "forcefield"

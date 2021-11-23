@@ -5,6 +5,7 @@
 namespace Tmpl8
 {
 Tank::Tank(
+    int id,
     float pos_x,
     float pos_y,
     allignments allignment,
@@ -15,7 +16,8 @@ Tank::Tank(
     float collision_radius,
     int health,
     float max_speed)
-    : position(pos_x, pos_y),
+    : id(id),
+      position(pos_x, pos_y),
       allignment(allignment),
       target(tar_x, tar_y),
       health(health),
@@ -45,9 +47,11 @@ void Tank::tick(Terrain& terrain)
         direction = (target - position).normalized();
     }
 
+
     //Update using accumulated force
     speed = direction + force;
     position += speed * max_speed * 0.5f;
+    
 
     //Update reload time
     if (--reload_time <= 0.0f)
