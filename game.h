@@ -46,7 +46,8 @@ class Game
   private:
     Surface* screen;
 
-    vector<Tank> tanks;
+    vector<Tank> tanks_alive;
+    vector<Tank> tanks_dead;
     vector<Rocket> rockets;
     vector<Smoke> smokes;
     vector<Explosion> explosions;
