@@ -66,13 +66,13 @@ void Game::init()
     for (int i = 0; i < num_tanks_blue; i++)
     {
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
-        tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        tanks.push_back(Tank(i, position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
     {
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
-        tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        tanks.push_back(Tank((i + num_tanks_blue), position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -119,13 +119,34 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 
 
 void Tmpl8::Game::check_collision() {
+    vector<Tank> sections[65][35];
     for (Tank& tank : tanks)
     {
+        vec2 position = tank.get_position();
+        float x = position.x / 20;
+        float y = position.y / 20;
+        if (x < 0.1f)
+            sections[(int)x-1][(int)y].push_back(tank);
+        if (x > 0.9f)
+            sections[(int)x+1][(int)y].push_back(tank);
+        if (y < 0.1f)
+            sections[(int)x][(int)y-1].push_back(tank);
+        if (y > 0.9f)
+            sections[(int)x][(int)y+1].push_back(tank);
+
+        sections[(int)x][(int)y].push_back(tank);
+    }
+
+    for (Tank& tank : tanks)
+        {
         if (tank.active)
         {
-            for (Tank& other_tank : tanks)
+            vec2 position = tank.get_position();
+            int x = position.x / 20;
+            int y = position.y / 20;
+            for (Tank& other_tank : sections[x][y])
             {
-                if (&tank == &other_tank || !other_tank.active) continue;
+                if (tank.id == other_tank.id || !other_tank.active) continue;
 
                 vec2 dir = tank.get_position() - other_tank.get_position();
                 float dir_squared_len = dir.sqr_length();
