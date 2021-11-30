@@ -41,6 +41,10 @@ const static vec2 rocket_size(6, 6);
 const static float tank_radius = 3.f;
 const static float rocket_radius = 5.f;
 
+const int cellsize = 20;
+
+
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -118,51 +122,6 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 }
 
 
-void Tmpl8::Game::check_collision() {
-    vector<Tank> sections[65][35];
-    for (Tank& tank : tanks_alive)
-    {
-        vec2 position = tank.get_position();
-        float x = position.x / 20;
-        float y = position.y / 20;
-        
-        if (x < 0.1f)
-            sections[(int)x-1][(int)y].push_back(tank);
-        if (x > 0.9f)
-            sections[(int)x+1][(int)y].push_back(tank);
-        if (y < 0.1f)
-            sections[(int)x][(int)y-1].push_back(tank);
-        if (y > 0.9f)
-            sections[(int)x][(int)y+1].push_back(tank);
-
-        sections[(int)x][(int)y].push_back(tank);
-    }
-
-    for (Tank& tank : tanks_alive)
-    {    
-        vec2 position = tank.get_position();
-        int x = position.x / 20;
-        int y = position.y / 20;
-        for (Tank& other_tank : sections[x][y])
-        {
-            if (tank.id == other_tank.id) continue;
-
-            vec2 dir = tank.get_position() - other_tank.get_position();
-            float dir_squared_len = dir.sqr_length();
-
-            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
-            col_squared_len *= col_squared_len;
-
-            if (dir_squared_len < col_squared_len)
-            {
-                tank.push(dir.normalized(), 1.f);
-            }
-        }
-        
-    }
-}
-
-
 // -----------------------------------------------------------
 // Update the game state:
 // Move all objects
@@ -182,9 +141,56 @@ void Game::update(float deltaTime)
         }
     }
 
-    //Check tank collision and nudge tanks away from each other
-    check_collision();
+    
+    //check_collision();
+    
+    //Add tanks to grid for optimalization
+    vector<Tank> grid[65][35];
+    //memset(grid, 0, sizeof(grid));
+    for (Tank& tank : tanks_alive)
+    {
+        vec2 position = tank.get_position();
+        float x = position.x / cellsize;
+        float y = position.y / cellsize;
+        int gridposx = x;
+        int gridposy = y;
+        x = x - gridposx;
+        y = y - gridposy;
 
+        if (x < 0.1f)
+            grid[gridposx - 1][gridposy].push_back(tank);
+        if (x > 0.9f)
+            grid[gridposx + 1][gridposy].push_back(tank);
+        if (y < 0.1f)
+            grid[gridposx][gridposy - 1].push_back(tank);
+        if (y > 0.9f)
+            grid[gridposx][gridposy + 1].push_back(tank);
+
+        grid[gridposx][gridposy].push_back(tank);
+    }
+
+
+    //Check tank collision and nudge tanks away from each other
+    for (Tank& tank : tanks_alive)
+    {
+        vec2 position = tank.get_position();
+        for (Tank& other_tank : grid[(int)(position.x / cellsize)][(int)(position.y / cellsize)])
+        {
+            if (tank.id == other_tank.id) continue;
+
+            vec2 dir = tank.get_position() - other_tank.get_position();
+            float dir_squared_len = dir.sqr_length();
+
+            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
+            col_squared_len *= col_squared_len;
+
+            if (dir_squared_len < col_squared_len)
+            {
+                tank.push(dir.normalized(), 1.f);
+            }
+        }
+
+    }
     //Update tanks
     for (Tank& tank : tanks_alive)
     {
@@ -256,18 +262,28 @@ void Game::update(float deltaTime)
     {
         rocket.tick();
 
-        int i = 0;
+        vec2 position = rocket.position;
+
+       
         //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        for (Tank& tank : tanks_alive)
+        for (Tank& tank : grid[(int)(position.x / cellsize)][(int)(position.y / cellsize)])
         {
-            if ((tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
+            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
             {
                 explosions.push_back(Explosion(&explosion, tank.position));
 
                 if (tank.hit(rocket_hit_value))
                 {
+                    int loc = 0;
+                    for (int i = 0; i < tanks_alive.size(); i++)
+                        if (tank.id == tanks_alive[i].id)
+                        {
+                            loc = i;
+                            continue;
+                        }
 
-                    tanks_alive.erase(tanks_alive.begin()+i);
+                    
+                    tanks_alive.erase(tanks_alive.begin()+loc);
                     tanks_dead.push_back(tank);
                     smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
                 }
@@ -275,7 +291,6 @@ void Game::update(float deltaTime)
                 rocket.active = false;
                 break;
             }
-            i++;
         }
     }
 
@@ -307,10 +322,11 @@ void Game::update(float deltaTime)
         particle_beam.tick(tanks_alive);
         particle_beam.tick(tanks_dead);
 
-        int i = 0;
+        
         //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
-        for (Tank& tank : tanks_alive)
+        for (int i = 0; i < tanks_alive.size(); i++)
         {
+            Tank& tank = tanks_alive[i];
             if (particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
             {
                 if (tank.hit(particle_beam.damage))
@@ -320,7 +336,6 @@ void Game::update(float deltaTime)
                     smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
                 }
             }
-            i++;
         }
     }
 
