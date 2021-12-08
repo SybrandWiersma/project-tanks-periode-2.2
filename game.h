@@ -18,7 +18,7 @@ class Game
     void draw();
     void tick(float deltaTime);
     void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
-    void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
+    void draw_health_bars(vector<int> tanks_hp, const int team);
     void measure_performance();
 
     Tank& find_closest_enemy(Tank& current_tank);
@@ -63,7 +63,8 @@ class Game
 
     //Checks if a point lies on the left of an arbitrary angled line
     bool left_of_line(vec2 line_start, vec2 line_end, vec2 point);
-    void check_collision();
+
+    void CountSort(vector<int>& a);
 };
 
 }; // namespace Tmpl8

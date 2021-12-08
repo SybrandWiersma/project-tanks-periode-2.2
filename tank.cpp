@@ -105,6 +105,7 @@ bool Tank::hit(int hit_value)
 
     if (health <= 0)
     {
+        health = 0;
         this->deactivate();
         return true;
     }
