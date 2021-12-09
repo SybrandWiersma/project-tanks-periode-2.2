@@ -19,6 +19,7 @@ class Tank
 
     void tick(Terrain& terrain);
 
+    int get_id() const { return id; };
     vec2 get_position() const { return position; };
     float get_collision_radius() const { return collision_radius; };
     bool rocket_reloaded() const { return reloaded; };
