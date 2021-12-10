@@ -66,8 +66,8 @@ void Tank::tick(Terrain& terrain)
     {
         if (std::abs(position.x - target.x) < 8.f && std::abs(position.y - target.y) < 8.f)
         {
-            target = current_route.at(0);
-            current_route.erase(current_route.begin());
+            target = current_route.back();
+            current_route.pop_back();
         }
     }
 }
@@ -77,8 +77,8 @@ void Tank::set_route(const std::vector<vec2>& route)
     if (route.size() > 0)
     {
         current_route = route;
-        target = current_route.at(0);
-        current_route.erase(current_route.begin());
+        target = current_route.back();
+        current_route.pop_back();
     }
     else
     {

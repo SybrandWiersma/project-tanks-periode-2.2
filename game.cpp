@@ -140,7 +140,7 @@ void Game::update(float deltaTime)
     {
         for (Tank& t : tanks_alive)
         {
-            t.set_route(background_terrain.get_route(t, t.target));
+            t.set_route(background_terrain.get_route_Astar(t, t.target));
         }
     }
 

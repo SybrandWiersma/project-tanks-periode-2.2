@@ -77,13 +77,18 @@ namespace Tmpl8
         {
             for (size_t x = 0; x < tiles.at(y).size(); x++)
             {
-                tiles.at(y).at(x).position_x = x;
-                tiles.at(y).at(x).position_y = y;
+                if (is_accessible(y, x)) {
+                    tiles.at(y).at(x).travelcost = INT_MAX;
+                    tiles.at(y).at(x).distance_to_destination_sqr = INT_MAX;
 
-                if (is_accessible(y, x + 1)) { tiles.at(y).at(x).exits.push_back(&tiles.at(y).at(x + 1)); }
-                if (is_accessible(y, x - 1)) { tiles.at(y).at(x).exits.push_back(&tiles.at(y).at(x - 1)); }
-                if (is_accessible(y + 1, x)) { tiles.at(y).at(x).exits.push_back(&tiles.at(y + 1).at(x)); }
-                if (is_accessible(y - 1, x)) { tiles.at(y).at(x).exits.push_back(&tiles.at(y - 1).at(x)); }
+                    tiles.at(y).at(x).position_x = x;
+                    tiles.at(y).at(x).position_y = y;
+
+                    if (is_accessible(y, x + 1)) tiles.at(y).at(x).neighbours.push_back(&tiles.at(y).at(x + 1));
+                    if (is_accessible(y, x - 1)) tiles.at(y).at(x).neighbours.push_back(&tiles.at(y).at(x - 1));
+                    if (is_accessible(y + 1, x)) tiles.at(y).at(x).neighbours.push_back(&tiles.at(y + 1).at(x));
+                    if (is_accessible(y - 1, x)) tiles.at(y).at(x).neighbours.push_back(&tiles.at(y - 1).at(x));
+                }
             }
         }
     }
@@ -128,8 +133,82 @@ namespace Tmpl8
         }
     }
 
+
+
+    vector<vec2> Terrain::get_route_Astar(const Tank& tank, const vec2& target) {
+
+        vector<vec2> route;
+        vector<TerrainTile*> visited;
+        vector<TerrainTile*> unvisited;
+        //Find start and target tile
+        const size_t pos_x = tank.position.x / sprite_size;
+        const size_t pos_y = tank.position.y / sprite_size;
+
+        const size_t target_x = target.x / sprite_size;
+        const size_t target_y = target.y / sprite_size;
+        TerrainTile* start_tile = &tiles.at(pos_y).at(pos_x);
+        TerrainTile* current_tile = start_tile;
+        current_tile->travelcost = 0;
+        unvisited.emplace_back(current_tile);
+        bool route_found = FALSE;
+
+        while (!unvisited.empty() && !route_found) {
+            TerrainTile* closest_tile = unvisited.back();
+            int position = unvisited.size() - 1;
+
+            for (int i = 0; i < unvisited.size(); i++){
+                if (unvisited.at(i)->distance_to_destination_sqr < closest_tile->distance_to_destination_sqr) {
+                    closest_tile = unvisited.at(i);
+                    position = i;
+                }
+            }
+            unvisited.erase(unvisited.begin() + position);
+            current_tile = closest_tile;
+
+            for (TerrainTile* neighbour_tile : current_tile->neighbours) {
+                if (neighbour_tile->visited)
+                    continue;
+                int pos_y = neighbour_tile->position_y;
+                int pos_x = neighbour_tile->position_x;
+                int distance_sqr = (target_y - pos_y) * (target_y - pos_y) + (target_x - pos_x) * (target_x - pos_x);
+                if (distance_sqr == 0)
+                    route_found = TRUE;
+                neighbour_tile->distance_to_destination_sqr = distance_sqr;
+                neighbour_tile->travelcost = current_tile->travelcost + 1;
+                unvisited.emplace_back(neighbour_tile);
+            }
+
+            current_tile->visited = TRUE;
+            visited.push_back(current_tile);
+            
+        }
+
+        while (current_tile != start_tile) {
+            route.push_back(vec2((float)current_tile->position_x * sprite_size, (float)current_tile->position_y * sprite_size));
+            int lowest_cost = INT_MAX;
+            for (TerrainTile* tile : current_tile->neighbours) {
+                if (tile->travelcost < lowest_cost) {
+                    lowest_cost = tile->travelcost;
+                    current_tile = tile;
+                }
+            }
+        }
+        for (TerrainTile* tile : visited) {
+            tile->travelcost = INT_MAX;
+            tile->distance_to_destination_sqr = INT_MAX;
+            tile->visited = FALSE;
+        }
+        for (TerrainTile* tile : unvisited) {
+            tile->travelcost = INT_MAX;
+            tile->distance_to_destination_sqr = INT_MAX;
+            tile->visited = FALSE;
+        }
+
+        
+        return route;
+    }
     //Use Breadth-first search to find shortest route to the destination
-    vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
+    /*vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
     {
         //Find start and target tile
         const size_t pos_x = tank.position.x / sprite_size;
@@ -154,7 +233,7 @@ namespace Tmpl8
             TerrainTile* current_tile = current_route.back();
 
             //Check all exits, if target then done, else if unvisited push a new partial route
-            for (TerrainTile * exit : current_tile->exits)
+            for (TerrainTile * exit : current_tile->neighbours)
             {
                 if (exit->position_x == target_x && exit->position_y == target_y)
                 {
@@ -194,7 +273,7 @@ namespace Tmpl8
             return  std::vector<vec2>();
         }
 
-    }
+    }*/
 
     //TODO: Function not used, convert BFS to dijkstra and take speed into account next year :)
     float Terrain::get_speed_modifier(const vec2& position) const
