@@ -159,15 +159,6 @@ void Game::update(float deltaTime)
     update_particle_beam();
     update_explosions();
 
-    
-    
-    
-    
-    
-
-    
-
-    
 }
 
 // Function for updating grid
@@ -200,22 +191,38 @@ void Game::check_collisions() {
     {
         vec2 position = tank.get_position();
         vec2 grid_pos = position / cellsize;
+        int x = grid_pos.x, y = grid_pos.y;
+        float from_edge_x = grid_pos.x - x, from_edge_y = grid_pos.y - y;
 
+        //Calculate if tank is near the edge a grid cell so the tank can also collide with the tank in the cell adjesent to it.
+        int i = x, j = y, i_max = x, j_max = y;
+        if (from_edge_x < 0.3f)
+            i--;
+        if (from_edge_x > 0.7f)
+            i_max++;
+        if (from_edge_y < 0.3f)
+            j --;
+        if (from_edge_y > 0.7f)
+            j_max++;
 
-        for (Tank* other_tank : grid[(int)grid_pos.x][(int)grid_pos.y])
-        {
-            if (tank.id == other_tank->get_id()) continue;
+        for (i; i <= i_max; i++) {
+            for (j; j <= j_max; j++) {
+                for (Tank* other_tank : grid[i][j])
+                {
+                    if (tank.id == other_tank->get_id()) continue;
 
-            vec2 dir = tank.get_position() - other_tank->get_position();
-            float dir_squared_len = dir.sqr_length();
+                    vec2 dir = tank.get_position() - other_tank->get_position();
+                    float dir_squared_len = dir.sqr_length();
 
-            float col_squared_len = (tank.get_collision_radius() + other_tank->get_collision_radius());
-            col_squared_len *= col_squared_len;
+                    float col_squared_len = (tank.get_collision_radius() + other_tank->get_collision_radius());
+                    col_squared_len *= col_squared_len;
 
-            if (dir_squared_len < col_squared_len)
-            {
-                tank.push(dir.normalized(), 1.f);
-                collisions++;
+                    if (dir_squared_len < col_squared_len)
+                    {
+                        tank.push(dir.normalized(), 1.f);
+                        collisions++;
+                    }
+                }
             }
         }
 
@@ -259,32 +266,41 @@ void Game::update_rockets() {
         rocket.tick();
 
         vec2 position = rocket.position;
+        vec2 grid_pos = position / cellsize;
+        int x = grid_pos.x, y = grid_pos.y;
+        float from_edge_x = grid_pos.x - x, from_edge_y = grid_pos.y - y;
 
+        //Calculate if tank is near the edge a grid cell so the tank can also collide with the tank in the cell adjesent to it.
+        int i = x, j = y, i_max = x, j_max = y;
+        if (from_edge_x < 0.5f)
+            i--;
+        else
+            i_max++;
+        if (from_edge_y < 0.5f)
+            j--;
+        else
+            j_max++;
 
-        //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        for (Tank* tank : grid[(int)(position.x / cellsize)][(int)(position.y / cellsize)])
-        {
-            if ((tank->allignment != rocket.allignment) && rocket.intersects(tank->position, tank->collision_radius))
-            {
-                explosions.push_back(Explosion(&explosion, tank->position));
-
-                if (tank->hit(rocket_hit_value))
+        for (i; i <= i_max; i++) {
+            for (j; j <= j_max; j++) {
+                //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
+                for (Tank* tank : grid[i][j])
                 {
-                    int loc = 0;
-                    for (int i = 0; i < tanks_alive.size(); i++)
-                        if (tank->get_id() == tanks_alive[i].id)
-                        {
-                            loc = i;
-                            continue;
-                        }
-                    Tank tank = tanks_alive.at(loc);
-                    tanks_alive.erase(tanks_alive.begin() + loc);
-                    tanks_dead.push_back(tank);
-                    smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
-                }
+                    if ((tank->allignment != rocket.allignment) && rocket.intersects(tank->position, tank->collision_radius))
+                    {
+                        explosions.push_back(Explosion(&explosion, tank->position));
 
-                rocket.active = false;
-                break;
+                        if (tank->hit(rocket_hit_value))
+                        {
+                            tanks_alive.erase(std::remove_if(tanks_alive.begin(), tanks_alive.end(), [tank](Tank& tank2) { return tank == &tank2; }), tanks_alive.end());
+                            tanks_dead.push_back(*tank);
+                            smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
+                        }
+
+                        rocket.active = false;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -452,7 +468,7 @@ void Game::draw()
     }
 
     //Draw forcefield (mostly for debugging, its kinda ugly..)
-    /*
+    
     for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);
@@ -461,7 +477,7 @@ void Game::draw()
         line_end.x += HEALTHBAR_OFFSET;
         screen->line(line_start, line_end, 0x0000ff);
     }
-    */
+    
 
     
 
