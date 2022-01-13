@@ -45,6 +45,7 @@ const int cellsize = 20;
 
 int collisions = 0;
 
+vector<Tank*> grid[65][35];
 
 
 // -----------------------------------------------------------
@@ -148,7 +149,15 @@ void Game::update(float deltaTime)
     //check_collision();
     
     //Add tanks to grid for optimalization
-    vector<Tank*> grid[65][35];
+
+    for (int i = 0; i < 65; i++)
+    {
+        for (int j = 0; j < 35; j++)
+        {
+            grid[i][j].clear();
+        }
+    }
+    
     //memset(grid, 0, sizeof(grid));
     for (Tank& tank : tanks_alive)
     {
@@ -157,18 +166,7 @@ void Game::update(float deltaTime)
         float y = position.y / cellsize;
         int gridposx = x;
         int gridposy = y;
-        x = x - gridposx;
-        y = y - gridposy;
-        
-        if (x < 0.5f)
-            grid[gridposx - 1][gridposy].push_back(&tank);
-        if (x > 0.5f)
-            grid[gridposx + 1][gridposy].push_back(&tank);
-        if (y < 0.5f)
-            grid[gridposx][gridposy - 1].push_back(&tank);
-        if (y > 0.5f)
-            grid[gridposx][gridposy + 1].push_back(&tank);
-        
+
         grid[gridposx][gridposy].push_back(&tank);
     }
 
@@ -177,7 +175,10 @@ void Game::update(float deltaTime)
     for (Tank& tank : tanks_alive)
     {
         vec2 position = tank.get_position();
-        for (Tank* other_tank : grid[(int)(position.x / cellsize)][(int)(position.y / cellsize)])
+        vec2 grid_pos = position / cellsize;
+
+        
+        for (Tank* other_tank : grid[(int)grid_pos.x][(int)grid_pos.y])
         {
             if (tank.id == other_tank->get_id()) continue;
 
@@ -218,7 +219,7 @@ void Game::update(float deltaTime)
     {
         smoke.tick();
     }
-
+    
     //Calculate "forcefield" around active tanks
     forcefield_hull.clear();
 
@@ -260,7 +261,7 @@ void Game::update(float deltaTime)
         }
         
     }
-
+    
     //Update rockets
     for (Rocket& rocket : rockets)
     {
@@ -303,6 +304,14 @@ void Game::update(float deltaTime)
     {
         if (rocket.active)
         {
+            /*
+            if (rocket.position.x > 1200 || rocket.position.y > 600 || rocket.position.x < 100 || rocket.position.y < 100) {
+                explosions.push_back(Explosion(&explosion, rocket.position));
+                rocket.active = false;
+            }
+            */
+
+            
             for (size_t i = 0; i < forcefield_hull.size(); i++)
             {
                 if (circle_segment_intersect(forcefield_hull.at(i), forcefield_hull.at((i + 1) % forcefield_hull.size()), rocket.position, rocket.collision_radius))
@@ -311,6 +320,7 @@ void Game::update(float deltaTime)
                     rocket.active = false;
                 }
             }
+            
         }
     }
 
@@ -398,6 +408,7 @@ void Game::draw()
     }
 
     //Draw forcefield (mostly for debugging, its kinda ugly..)
+    /*
     for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);
@@ -406,6 +417,7 @@ void Game::draw()
         line_end.x += HEALTHBAR_OFFSET;
         screen->line(line_start, line_end, 0x0000ff);
     }
+    */
 
     
 
