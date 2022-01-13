@@ -65,6 +65,15 @@ class Game
     bool left_of_line(vec2 line_start, vec2 line_end, vec2 point);
 
     void CountSort(vector<int>& a);
+
+    void update_grid();
+    void check_collisions();
+    void update_tank();
+    void update_smokes();
+    void update_rockets();
+    void update_forcefield();
+    void update_particle_beam();
+    void update_explosions();
 };
 
 }; // namespace Tmpl8

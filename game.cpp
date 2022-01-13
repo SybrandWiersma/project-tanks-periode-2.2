@@ -47,6 +47,10 @@ int collisions = 0;
 
 vector<Tank*> grid[65][35];
 
+const unsigned int thread_count = thread::hardware_concurrency() * 2;
+
+ThreadPool pool(thread_count);
+
 
 // -----------------------------------------------------------
 // Initialize the simulation state
@@ -137,6 +141,7 @@ void Game::update(float deltaTime)
 {
     //Calculate the route to the destination for each tank using BFS
     //Initializing routes here so it gets counted for performance..
+
     if (frame_count == 0)
     {
         for (Tank& t : tanks_alive)
@@ -145,11 +150,29 @@ void Game::update(float deltaTime)
         }
     }
 
-    
-    //check_collision();
-    
-    //Add tanks to grid for optimalization
+    update_grid();
+    check_collisions();
+    update_tank();
+    update_smokes();
+    update_rockets();
+    update_forcefield();
+    update_particle_beam();
+    update_explosions();
 
+    
+    
+    
+    
+    
+
+    
+
+    
+}
+
+// Function for updating grid
+void Game::update_grid() {
+    //Clear grid
     for (int i = 0; i < 65; i++)
     {
         for (int j = 0; j < 35; j++)
@@ -157,8 +180,8 @@ void Game::update(float deltaTime)
             grid[i][j].clear();
         }
     }
-    
-    //memset(grid, 0, sizeof(grid));
+
+    //Add tanks to grid for optimalization
     for (Tank& tank : tanks_alive)
     {
         vec2 position = tank.get_position();
@@ -169,15 +192,16 @@ void Game::update(float deltaTime)
 
         grid[gridposx][gridposy].push_back(&tank);
     }
+}
 
-
-    //Check tank collision and nudge tanks away from each other
+//Check tank collision and nudge tanks away from each other
+void Game::check_collisions() {  
     for (Tank& tank : tanks_alive)
     {
         vec2 position = tank.get_position();
         vec2 grid_pos = position / cellsize;
 
-        
+
         for (Tank* other_tank : grid[(int)grid_pos.x][(int)grid_pos.y])
         {
             if (tank.id == other_tank->get_id()) continue;
@@ -196,7 +220,10 @@ void Game::update(float deltaTime)
         }
 
     }
-    //Update tanks
+}
+
+// Function for updating tanks
+void Game::update_tank() {
     for (Tank& tank : tanks_alive)
     {
         //Move tanks according to speed and nudges (see above) also reload
@@ -211,65 +238,29 @@ void Game::update(float deltaTime)
 
             tank.reload_rocket();
         }
-        
-    }
 
-    //Update smoke plumes
+    }
+}
+
+// Function for updating smoke plumes
+void Game::update_smokes() {
+    
     for (Smoke& smoke : smokes)
     {
         smoke.tick();
     }
+}
+
+// Function for updating rockets
+void Game::update_rockets() {
     
-    //Calculate "forcefield" around active tanks
-    forcefield_hull.clear();
-
-    //Find first active tank
-    vec2 point_on_hull = tanks_alive.at(0).position;
-
-    //Find left most tank position
-    for (Tank& tank : tanks_alive)
-    {
- 
-        if (tank.position.x <= point_on_hull.x)
-        {
-            point_on_hull = tank.position;
-        }
-        
-    }
-
-    //Calculate convex hull for 'rocket barrier'
-    for (Tank& tank : tanks_alive)
-    {
-
-        forcefield_hull.push_back(point_on_hull);
-        vec2 endpoint = tanks_alive.at(0).position;
-
-        for (Tank& tank : tanks_alive)
-        {
-                
-            if ((endpoint == point_on_hull) || left_of_line(point_on_hull, endpoint, tank.position))
-            {
-                endpoint = tank.position;
-            }
-                
-        }
-        point_on_hull = endpoint;
-
-        if (endpoint == forcefield_hull.at(0))
-        {
-            break;
-        }
-        
-    }
-    
-    //Update rockets
     for (Rocket& rocket : rockets)
     {
         rocket.tick();
 
         vec2 position = rocket.position;
 
-       
+
         //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
         for (Tank* tank : grid[(int)(position.x / cellsize)][(int)(position.y / cellsize)])
         {
@@ -287,7 +278,7 @@ void Game::update(float deltaTime)
                             continue;
                         }
                     Tank tank = tanks_alive.at(loc);
-                    tanks_alive.erase(tanks_alive.begin()+loc);
+                    tanks_alive.erase(tanks_alive.begin() + loc);
                     tanks_dead.push_back(tank);
                     smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
                 }
@@ -311,7 +302,7 @@ void Game::update(float deltaTime)
             }
             */
 
-            
+
             for (size_t i = 0; i < forcefield_hull.size(); i++)
             {
                 if (circle_segment_intersect(forcefield_hull.at(i), forcefield_hull.at((i + 1) % forcefield_hull.size()), rocket.position, rocket.collision_radius))
@@ -320,7 +311,7 @@ void Game::update(float deltaTime)
                     rocket.active = false;
                 }
             }
-            
+
         }
     }
 
@@ -328,14 +319,60 @@ void Game::update(float deltaTime)
 
     //Remove exploded rockets with remove erase idiom
     rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
+}
 
+void Game::update_forcefield() {
+    //Calculate "forcefield" around active tanks
+    forcefield_hull.clear();
+
+    //Find first active tank
+    vec2 point_on_hull = tanks_alive.at(0).position;
+
+    //Find left most tank position
+    for (Tank& tank : tanks_alive)
+    {
+
+        if (tank.position.x <= point_on_hull.x)
+        {
+            point_on_hull = tank.position;
+        }
+
+    }
+
+    //Calculate convex hull for 'rocket barrier'
+    for (Tank& tank : tanks_alive)
+    {
+
+        forcefield_hull.push_back(point_on_hull);
+        vec2 endpoint = tanks_alive.at(0).position;
+
+        for (Tank& tank : tanks_alive)
+        {
+
+            if ((endpoint == point_on_hull) || left_of_line(point_on_hull, endpoint, tank.position))
+            {
+                endpoint = tank.position;
+            }
+
+        }
+        point_on_hull = endpoint;
+
+        if (endpoint == forcefield_hull.at(0))
+        {
+            break;
+        }
+
+    }
+}
+
+void Game::update_particle_beam() {
     //Update particle beams
     for (Particle_beam& particle_beam : particle_beams)
     {
         particle_beam.tick(tanks_alive);
         particle_beam.tick(tanks_dead);
 
-        
+
         //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
         for (int i = 0; i < tanks_alive.size(); i++)
         {
@@ -345,13 +382,15 @@ void Game::update(float deltaTime)
                 if (tank.hit(particle_beam.damage))
                 {
                     tanks_alive.erase(tanks_alive.begin() + i);
-                    tanks_dead.push_back(tank); 
+                    tanks_dead.push_back(tank);
                     smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
                 }
             }
         }
     }
+}
 
+void Game::update_explosions() {
     //Update explosion sprites and remove when done with remove erase idiom
     for (Explosion& explosion : explosions)
     {
@@ -360,6 +399,11 @@ void Game::update(float deltaTime)
 
     explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
 }
+
+
+
+
+
 
 // -----------------------------------------------------------
 // Draw all sprites to the screen
