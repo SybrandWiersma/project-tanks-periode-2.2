@@ -51,6 +51,8 @@ const unsigned int thread_count = thread::hardware_concurrency() * 2;
 
 ThreadPool pool(thread_count);
 
+int counter = 0;
+
 
 // -----------------------------------------------------------
 // Initialize the simulation state
@@ -148,12 +150,19 @@ void Game::update(float deltaTime)
         {
             t.set_route(background_terrain.get_route_Astar(t, t.target));
         }
+        update_grid();
+
     }
 
-    update_grid();
+    
     check_collisions();
+    
+    
     update_tank();
+    
+    int time1 = perf_timer.elapsed();
     update_grid();
+    counter += perf_timer.elapsed() - time1;
     update_smokes();
     update_rockets();
     update_forcefield();
@@ -378,7 +387,7 @@ void Game::update_forcefield() {
         {
             break;
         }
-
+        
     }
 }
 
@@ -571,7 +580,7 @@ void Tmpl8::Game::measure_performance()
         {
             duration = perf_timer.elapsed();
             cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
-            cout << collisions;
+            cout << ((float)counter / 2000);
             lock_update = true;
         }
 
