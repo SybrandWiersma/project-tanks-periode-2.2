@@ -153,6 +153,7 @@ void Game::update(float deltaTime)
     update_grid();
     check_collisions();
     update_tank();
+    update_grid();
     update_smokes();
     update_rockets();
     update_forcefield();
@@ -292,7 +293,7 @@ void Game::update_rockets() {
 
                         if (tank->hit(rocket_hit_value))
                         {
-                            tanks_alive.erase(std::remove_if(tanks_alive.begin(), tanks_alive.end(), [tank](Tank& tank2) { return tank == &tank2; }), tanks_alive.end());
+                            tanks_alive.erase(remove_if(tanks_alive.begin(), tanks_alive.end(), [tank](Tank& tank2) { return tank == &tank2; }), tanks_alive.end());
                             tanks_dead.push_back(*tank);
                             smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
                         }
