@@ -45,16 +45,11 @@ const int cellsize = 20;
 const float collision_max_edge = (tank_radius * 2) / 20;
 const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 
-int collisions = 0;
-
 vector<Tank*> grid[65][35];
 
 const unsigned int thread_count = thread::hardware_concurrency() * 2;
 
 ThreadPool pool(thread_count);
-
-int counter = 0;
-
 
 // -----------------------------------------------------------
 // Initialize the simulation state
@@ -104,27 +99,77 @@ void Game::shutdown()
 }
 
 // -----------------------------------------------------------
-// Iterates through all tanks and returns the closest enemy tank for the given tank
+// Checks first the closest grid cells for enemy tank, growing in radius when enemy tank not found 
 // -----------------------------------------------------------
 Tank& Game::find_closest_enemy(Tank& current_tank)
 {
     float closest_distance = numeric_limits<float>::infinity();
     int closest_index = 0;
+    int radius = 1;
 
-    for (int i = 0; i < tanks_alive.size(); i++)
-    {
-        if (tanks_alive.at(i).allignment != current_tank.allignment)
+    bool n = TRUE, e = TRUE, s = TRUE, w = TRUE;
+
+    Tank* closest_tank{};
+
+    vec2 position = current_tank.position;
+    int x = position.x / cellsize;
+    int y = position.y / cellsize;
+    int north = y, east = x, south = y, west = x;
+
+    while (closest_tank == NULL) {
+        // check if the side you want to check is not out of the field 
+        if (north < 34) {
+            north++;
+        }
+        else
+            n = FALSE;
+        if (east < 64) {
+            east++;
+        }
+        else
+            e = FALSE;
+        if (south > 0) {
+            south--;
+        }
+        else
+            s = FALSE;
+        if (west > 0) {
+            west--;
+        }
+        else
+            w = FALSE;
+
+        // check if enemy tank is in cell you want to check
+        if(n)
+            for(int i = west; i <= east; i++)
+                check_closest(grid[i][north], current_tank, closest_tank, closest_distance);
+        if(e)
+            for (int i = south; i <= north; i++)
+                check_closest(grid[east][i], current_tank, closest_tank, closest_distance);
+        if(s)
+            for (int i = west; i <= east; i++)
+                check_closest(grid[i][south], current_tank, closest_tank, closest_distance);
+        if(w)
+            for (int i = south; i <= north; i++)
+                check_closest(grid[west][i], current_tank, closest_tank, closest_distance);
+        
+        radius++;
+    }
+    return *closest_tank;
+
+}
+
+void Game::check_closest(vector<Tank*>&tanks, Tank& current_tank, Tank*& closest_tank, float& closest_distance) {
+    for (Tank* tank : tanks) {
+        if (tank->allignment == current_tank.allignment)
+            continue;
+        float sqr_dist = fabsf((tank->get_position() - current_tank.get_position()).sqr_length());
+        if (sqr_dist < closest_distance)
         {
-            float sqr_dist = fabsf((tanks_alive.at(i).get_position() - current_tank.get_position()).sqr_length());
-            if (sqr_dist < closest_distance)
-            {
-                closest_distance = sqr_dist;
-                closest_index = i;
-            }
+            closest_distance = sqr_dist;
+            closest_tank = tank;
         }
     }
-
-    return tanks_alive.at(closest_index);
 }
 
 //Checks if a point lies on the left of an arbitrary angled line
@@ -156,20 +201,16 @@ void Game::update(float deltaTime)
 
     }
 
-    
+
     check_collisions();
-    
-    
     update_tank();
-    
-    int time1 = perf_timer.elapsed();
     update_grid();
-    counter += perf_timer.elapsed() - time1;
     update_smokes();
     update_rockets();
     update_forcefield();
     update_particle_beam();
     update_explosions();
+
 
 }
 
@@ -232,7 +273,6 @@ void Game::check_collisions() {
                     if (dir_squared_len < col_squared_len)
                     {
                         tank.push(dir.normalized(), 1.f);
-                        collisions++;
                     }
                 }
             }
@@ -324,14 +364,6 @@ void Game::update_rockets() {
     {
         if (rocket.active)
         {
-            /*
-            if (rocket.position.x > 1200 || rocket.position.y > 600 || rocket.position.x < 100 || rocket.position.y < 100) {
-                explosions.push_back(Explosion(&explosion, rocket.position));
-                rocket.active = false;
-            }
-            */
-
-
             for (size_t i = 0; i < forcefield_hull.size(); i++)
             {
                 if (circle_segment_intersect(forcefield_hull.at(i), forcefield_hull.at((i + 1) % forcefield_hull.size()), rocket.position, rocket.collision_radius))
@@ -451,13 +483,11 @@ void Game::draw()
     {
         tank.draw(screen);
 
-        //vec2 tank_pos = tanks.at(i).get_position();
     }
     for (Tank tank : tanks_dead)
     {
         tank.draw(screen);
 
-        //vec2 tank_pos = tanks.at(i).get_position();
     }
 
     for (Rocket& rocket : rockets)
@@ -507,15 +537,12 @@ void Game::draw()
             tanks_hp.push_back(tank.get_health());
         
         CountSort(tanks_hp);
-        //insertion_sort_tanks_health(tanks_to_sort, sorted_tanks, begin, begin + NUM_TANKS);
-        //sorted_tanks.erase(std::remove_if(sorted_tanks.begin(), sorted_tanks.end(), [](const Tank* tank) { return !tank->active; }), sorted_tanks.end());
         draw_health_bars(tanks_hp, t);
     }
 }
 
 void Game::CountSort(vector<int>& a)
 {
-
     int count[101];
     
     for (int i = 0; i < size(count); i++)
@@ -531,8 +558,6 @@ void Game::CountSort(vector<int>& a)
         for (int j = 0; j < count[i]; j++)
             a.emplace_back(i * 10);
     }
-
-
 }
 
 
@@ -583,8 +608,6 @@ void Tmpl8::Game::measure_performance()
         {
             duration = perf_timer.elapsed();
             cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
-            cout << ((float)counter / 2000) << endl;
-            cout << collisions;
             lock_update = true;
         }
 
@@ -614,12 +637,6 @@ void Game::tick(float deltaTime)
     draw();
 
     measure_performance();
-
-    // print something in the graphics window
-    //screen->Print("hello world", 2, 2, 0xffffff);
-
-    // print something to the text window
-    //cout << "This goes to the console window." << std::endl;
 
     //Print frame count
     frame_count++;

@@ -63,6 +63,7 @@ class Game
 
     //Checks if a point lies on the left of an arbitrary angled line
     bool left_of_line(vec2 line_start, vec2 line_end, vec2 point);
+    void check_closest(vector<Tank*> &tanks, Tank& current_tank, Tank*& closest_tank, float& closest_distance);
 
     void CountSort(vector<int>& a);
 
