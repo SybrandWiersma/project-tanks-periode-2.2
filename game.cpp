@@ -42,6 +42,8 @@ const static float tank_radius = 3.f;
 const static float rocket_radius = 5.f;
 
 const int cellsize = 20;
+const float collision_max_edge = (tank_radius * 2) / 20;
+const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 
 int collisions = 0;
 
@@ -205,18 +207,18 @@ void Game::check_collisions() {
         float from_edge_x = grid_pos.x - x, from_edge_y = grid_pos.y - y;
 
         //Calculate if tank is near the edge a grid cell so the tank can also collide with the tank in the cell adjesent to it.
-        int i = x, j = y, i_max = x, j_max = y;
-        if (from_edge_x < 0.3f)
-            i--;
-        if (from_edge_x > 0.7f)
-            i_max++;
-        if (from_edge_y < 0.3f)
-            j --;
-        if (from_edge_y > 0.7f)
-            j_max++;
+        int x_max = x, y_max = y;
+        if (from_edge_x < collision_max_edge)
+            x--;
+        if (from_edge_x > (1 - collision_max_edge))
+            x_max++;
+        if (from_edge_y < collision_max_edge)
+            y--;
+        if (from_edge_y > (1 - collision_max_edge))
+            y_max++;
 
-        for (i; i <= i_max; i++) {
-            for (j; j <= j_max; j++) {
+        for (int i = x; i <= x_max; i++) {
+            for (int j = y; j <= y_max; j++) {
                 for (Tank* other_tank : grid[i][j])
                 {
                     if (tank.id == other_tank->get_id()) continue;
@@ -281,18 +283,18 @@ void Game::update_rockets() {
         float from_edge_x = grid_pos.x - x, from_edge_y = grid_pos.y - y;
 
         //Calculate if tank is near the edge a grid cell so the tank can also collide with the tank in the cell adjesent to it.
-        int i = x, j = y, i_max = x, j_max = y;
-        if (from_edge_x < 0.5f)
-            i--;
-        else
-            i_max++;
-        if (from_edge_y < 0.5f)
-            j--;
-        else
-            j_max++;
+        int x_max = x, y_max = y;
+        if (from_edge_x < rockets_max_edge)
+            x--;
+        if (from_edge_x > (1 - rockets_max_edge))
+            x_max++;
+        if (from_edge_y < rockets_max_edge)
+            y--;
+        if (from_edge_y > (1 - rockets_max_edge))
+            y_max++;
 
-        for (i; i <= i_max; i++) {
-            for (j; j <= j_max; j++) {
+        for (int i = x; i <= x_max; i++) {
+            for (int j = y; j <= y_max; j++) {
                 //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
                 for (Tank* tank : grid[i][j])
                 {
@@ -302,7 +304,6 @@ void Game::update_rockets() {
 
                         if (tank->hit(rocket_hit_value))
                         {
-                            tanks_alive.erase(remove_if(tanks_alive.begin(), tanks_alive.end(), [tank](Tank& tank2) { return tank == &tank2; }), tanks_alive.end());
                             tanks_dead.push_back(*tank);
                             smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
                         }
@@ -314,6 +315,8 @@ void Game::update_rockets() {
             }
         }
     }
+
+    tanks_alive.erase(remove_if(tanks_alive.begin(), tanks_alive.end(), [](const Tank& tank) { return !tank.active; }), tanks_alive.end());
 
     //Disable rockets if they collide with the "forcefield"
     //Hint: A point to convex hull intersection test might be better here? :) (Disable if outside)
@@ -580,7 +583,8 @@ void Tmpl8::Game::measure_performance()
         {
             duration = perf_timer.elapsed();
             cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
-            cout << ((float)counter / 2000);
+            cout << ((float)counter / 2000) << endl;
+            cout << collisions;
             lock_update = true;
         }
 
