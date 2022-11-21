@@ -5,8 +5,6 @@ namespace Tmpl8
 
 class ThreadPool; //Forward declare
 
-class Worker;
-
 class Worker
 {
   public:
@@ -57,6 +55,14 @@ class ThreadPool
         condition.notify_one();
 
         return wrapper->get_future();
+    }
+
+    void waitEmpty()
+    {
+        while (!tasks.empty()) 
+        {
+            std::cout << tasks.size() << std::endl;
+        }
     }
 
   private:
