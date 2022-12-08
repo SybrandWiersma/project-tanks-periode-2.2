@@ -57,12 +57,21 @@ class ThreadPool
         return wrapper->get_future();
     }
 
-    void waitEmpty()
+    void run_pending_task()
     {
-        while (!tasks.empty()) 
+        std::function<void()> task;
+        while (!tasks.empty())
         {
-            std::cout << tasks.size() << std::endl;
+            {
+                std::unique_lock<std::mutex> locker(queue_mutex);
+
+                task = tasks.front();
+                tasks.pop_front();
+            }
+
+            task();
         }
+        std::this_thread::yield();
     }
 
   private:

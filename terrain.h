@@ -11,18 +11,27 @@ namespace Tmpl8
         WATER
     };
 
+    class AstarData
+    {
+    public:
+        AstarData(int travelcost, int distance_to_destination_sqr) : travelcost(travelcost), distance_to_destination_sqr(distance_to_destination_sqr) {}
+        
+        int travelcost;
+        int distance_to_destination_sqr;
+        bool visited = false;
+
+    private:
+    };
+
+
     class TerrainTile
     {
     public:
-        //TerrainTile *up, *down, *left, *right;
         vector<TerrainTile*> neighbours;
-        bool visited = false;
-
+        
+        vector<AstarData> data;
         size_t position_x;
         size_t position_y;
-
-        int travelcost;
-        int distance_to_destination_sqr;
 
         TileType tile_type;
 
@@ -39,7 +48,7 @@ namespace Tmpl8
         void draw(Surface* target) const;
 
         //Use Breadth-first search to find shortest route to the destination
-        vector<vec2> get_route(const Tank& tank, const vec2& target);
+        //vector<vec2> get_route(const Tank& tank, const vec2& target);
         vector<vec2> get_route_Astar(const Tank& tank, const vec2& target);
 
         float get_speed_modifier(const vec2& position) const;
@@ -52,6 +61,9 @@ namespace Tmpl8
         static constexpr int sprite_size = 16;
         static constexpr size_t terrain_width = 80;
         static constexpr size_t terrain_height = 45;
+
+        vector<bool> terrain_astar_data;
+        std::mutex astar_data_mutex;
 
         std::unique_ptr<Surface> grass_img;
         std::unique_ptr<Surface> forest_img;

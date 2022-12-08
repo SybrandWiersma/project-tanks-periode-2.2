@@ -15,6 +15,7 @@ class Game
     void init();
     void shutdown();
     void update(float deltaTime);
+    void set_tank_route();
     void draw();
     void tick(float deltaTime);
     

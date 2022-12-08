@@ -48,7 +48,7 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 vector<Tank*> grid[65][35];
 
 //const unsigned int thread_count = thread::hardware_concurrency() * 2;
-const unsigned int thread_count = 1;
+const unsigned int thread_count = 4;
 
 ThreadPool pool(thread_count);
 
@@ -192,18 +192,10 @@ void Game::update(float deltaTime)
 	//Calculate the route to the destination for each tank using BFS
 	//Initializing routes here so it gets counted for performance..
 
-
-
-
 	if (frame_count == 0)
 	{
 
-		for (Tank& t : tanks_alive)
-		{
-			pool.enqueue([=, &t]() { t.set_route(background_terrain.get_route_Astar(t, t.target)); });
-
-		}
-		pool.waitEmpty();
+		set_tank_route();
 		update_grid();
 
 	}
@@ -220,6 +212,24 @@ void Game::update(float deltaTime)
 
 
 }
+
+void Game::set_tank_route() {
+	int total = tanks_alive.size();
+	int parts = 4;
+	int chunk = total / parts;
+
+
+	std::for_each(std::execution::par, tanks_alive.begin(), tanks_alive.end(), [&](Tank& tank) {
+		//for (int i = 0; i < parts; i++) {
+		//	for (tanks_alive.begin(), ) {
+
+		tank.set_route(background_terrain.get_route_Astar(tank, tank.target));
+	//pool.enqueue([=, &t]() { t.set_route(background_terrain.get_route_Astar(t, t.target)); });
+	//pool.run_pending_task();
+		}
+	);
+}
+
 
 // Function for updating grid
 void Game::update_grid() {
