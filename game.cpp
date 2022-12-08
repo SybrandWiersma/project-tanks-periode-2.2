@@ -14,7 +14,7 @@ constexpr auto health_bar_width = 70;
 constexpr auto max_frames = 2000;
 
 //Global performance timer
-constexpr auto REF_PERFORMANCE = 158260; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
+constexpr auto REF_PERFORMANCE = 60239; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
 static timer perf_timer;
 static float duration;
 
@@ -48,7 +48,7 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 vector<Tank*> grid[65][35];
 
 //const unsigned int thread_count = thread::hardware_concurrency() * 2;
-const unsigned int thread_count = 4;
+const unsigned int thread_count = 1;
 
 ThreadPool pool(thread_count);
 
