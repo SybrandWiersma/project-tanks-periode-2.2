@@ -48,7 +48,7 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 vector<Tank*> grid[65][35];
 
 //const unsigned int thread_count = thread::hardware_concurrency() * 2;
-const unsigned int thread_count = 1;
+const unsigned int thread_count = 4;
 
 ThreadPool pool(thread_count);
 
@@ -61,7 +61,9 @@ void Game::init()
 {
 	frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
-	tanks_alive.reserve(num_tanks_blue + num_tanks_red);
+
+	int total_num_tanks = num_tanks_blue + num_tanks_red;
+	tanks_alive.reserve(total_num_tanks);
 
 	uint max_rows = 24;
 
@@ -194,8 +196,9 @@ void Game::update(float deltaTime)
 
 	if (frame_count == 0)
 	{
-
 		set_tank_route();
+		//pool.enqueue([&]() {update_grid(); });
+		//set_tank_route();
 		update_grid();
 
 	}
@@ -214,31 +217,16 @@ void Game::update(float deltaTime)
 }
 
 void Game::set_tank_route() {
-	int total = tanks_alive.size();
-	int parts = 4;
-	int chunk = total / parts;
-
-
-	std::for_each(std::execution::par, tanks_alive.begin(), tanks_alive.end(), [&](Tank& tank) {
-		//for (int i = 0; i < parts; i++) {
-		//	for (tanks_alive.begin(), ) {
-
-		tank.set_route(background_terrain.get_route_Astar(tank, tank.target));
-	//pool.enqueue([=, &t]() { t.set_route(background_terrain.get_route_Astar(t, t.target)); });
-	//pool.run_pending_task();
-		}
-	);
+	split_task(tanks_alive, [&](Tank& tank) {tank.set_route(background_terrain.get_route_Astar(tank, tank.target)); });
 }
 
 
 // Function for updating grid
 void Game::update_grid() {
 	//Clear grid
-	for (int i = 0; i < 65; i++)
-	{
-		for (int j = 0; j < 35; j++)
-		{
-			grid[i][j].clear();
+	for (int x = 0; x < 65; x++){
+		for (int y = 0; y < 35; y++){
+			grid[x][y].clear();
 		}
 	}
 
@@ -252,15 +240,41 @@ void Game::update_grid() {
 		int gridposy = y;
 
 		grid[gridposx][gridposy].push_back(&tank);
+		
+	}
+}
+
+template <class X, typename Y>
+void Game::split_task(Y& objects, X task) {
+	int total = objects.size();
+	int chunk_count = thread_count;
+	int chunk_size = total / chunk_count;
+	int rest = 0;
+	vector<std::future<void>> futures;
+
+	for (int i = 0; i < chunk_count; i++) {
+		if (i == chunk_count - 1) {
+			int rest = chunk_size + (total % chunk_size);
+		}
+
+		futures.push_back(pool.enqueue([&, chunk_size, i]() {
+			for (int x = chunk_size * i; x < i * chunk_size + chunk_size + rest; x++) {
+				auto& object = objects[x];
+				task(object);
+			}
+			}));
+	}
+	for (std::future<void> &f : futures) {
+		f.get();
 	}
 }
 
 //Check tank collision and nudge tanks away from each other
 void Game::check_collisions() {
-	std::for_each(std::execution::par, tanks_alive.begin(), tanks_alive.end(), [](Tank& tank) {
+	split_task(tanks_alive, [&](Tank &tank) {
 		vec2 position = tank.get_position();
 		vec2 grid_pos = position / cellsize;
-		int x = grid_pos.x, y = grid_pos.y;
+		int x = floor(grid_pos.x), y = floor(grid_pos.y);
 		float from_edge_x = grid_pos.x - x, from_edge_y = grid_pos.y - y;
 
 		//Calculate if tank is near the edge a grid cell so the tank can also collide with the tank in the cell adjesent to it.
@@ -295,26 +309,27 @@ void Game::check_collisions() {
 				}
 			}
 		}
+			
 	});
 }
 
 // Function for updating tanks
 void Game::update_tank() {
 	std::mutex rocket_mutex;
-	std::for_each(std::execution::par, tanks_alive.begin(), tanks_alive.end(), [&](Tank& tank) {
+	split_task(tanks_alive, [&](Tank& tank) {
 		//Move tanks according to speed and nudges (see above) also reload
 		tank.tick(background_terrain);
 
-	//Shoot at closest target if reloaded
-	if (tank.rocket_reloaded())
-	{
-		Tank& target = find_closest_enemy(tank);
+		//Shoot at closest target if reloaded
+		if (tank.rocket_reloaded())
 		{
-			std::lock_guard<std::mutex> guard(rocket_mutex);
-			rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
+			Tank& target = find_closest_enemy(tank);
+			{
+				std::lock_guard<std::mutex> guard(rocket_mutex);
+				rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
+			}
+			tank.reload_rocket();
 		}
-		tank.reload_rocket();
-	}
 
 	});
 }
@@ -460,24 +475,42 @@ void Game::update_particle_beam() {
 	for (Particle_beam& particle_beam : particle_beams)
 	{
 		particle_beam.tick(tanks_alive);
-		particle_beam.tick(tanks_dead);
-
 
 		//Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
-		for (int i = 0; i < tanks_alive.size(); i++)
+		for (Tank& tank : tanks_alive)
 		{
-			Tank& tank = tanks_alive[i];
 			if (particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
 			{
 				if (tank.hit(particle_beam.damage))
 				{
-					tanks_alive.erase(tanks_alive.begin() + i);
 					tanks_dead.push_back(tank);
+					smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));\
+
+				}
+			}
+		}
+	}
+
+	tanks_alive.erase(remove_if(tanks_alive.begin(), tanks_alive.end(), [](const Tank& tank) { return !tank.active; }), tanks_alive.end());
+	/*
+	//Update particle beams
+	for (Particle_beam& particle_beam : particle_beams)
+	{
+		particle_beam.tick(tanks);
+
+		//Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
+		for (Tank& tank : tanks)
+		{
+			if (tank.active && particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
+			{
+				if (tank.hit(particle_beam.damage))
+				{
 					smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
 				}
 			}
 		}
 	}
+	*/
 }
 
 void Game::update_explosions() {
@@ -572,10 +605,7 @@ void Game::draw()
 
 void Game::CountSort(vector<int>& a)
 {
-	int count[101];
-
-	for (int i = 0; i < size(count); i++)
-		count[i] = 0;
+	int count[101] = { 0 };
 
 	for (int tank_hp : a) {
 		tank_hp /= 10;

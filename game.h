@@ -76,6 +76,8 @@ class Game
     void update_forcefield();
     void update_particle_beam();
     void update_explosions();
+    template<class X, typename Y>
+    void split_task(Y& objects, X task);
 };
 
 }; // namespace Tmpl8

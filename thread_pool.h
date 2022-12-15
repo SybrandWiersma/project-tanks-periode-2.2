@@ -64,7 +64,8 @@ class ThreadPool
         {
             {
                 std::unique_lock<std::mutex> locker(queue_mutex);
-
+                if (tasks.empty())
+                    break;
                 task = tasks.front();
                 tasks.pop_front();
             }
