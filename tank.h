@@ -61,7 +61,7 @@ class Tank
     int current_frame;
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
-
+    
 };
 
 } // namespace Tmpl8

@@ -203,7 +203,6 @@ void Game::update(float deltaTime)
 
 	}
 
-
 	check_collisions();
 	update_tank();
 	update_grid();
@@ -247,6 +246,8 @@ void Game::update_grid() {
 template <class X, typename Y>
 void Game::split_task(Y& objects, X task) {
 	int total = objects.size();
+	if (total == 0)
+		return;
 	int chunk_count = thread_count;
 	int chunk_size = total / chunk_count;
 	int rest = 0;
@@ -254,7 +255,8 @@ void Game::split_task(Y& objects, X task) {
 
 	for (int i = 0; i < chunk_count; i++) {
 		if (i == chunk_count - 1) {
-			int rest = chunk_size + (total % chunk_size);
+			
+			int rest = chunk_size + (total % chunk_count);
 		}
 
 		futures.push_back(pool.enqueue([&, chunk_size, i]() {
@@ -337,9 +339,8 @@ void Game::update_tank() {
 // Function for updating smoke plumes
 void Game::update_smokes() {
 
-	std::for_each(std::execution::par, smokes.begin(), smokes.end(), [](Smoke& smoke) {
-		smoke.tick();
-	});
+	split_task(smokes, [](Smoke& smoke) {smoke.tick(); });
+
 }
 
 // Function for updating rockets
@@ -348,8 +349,9 @@ void Game::update_rockets() {
 	std::mutex tanks_dead_mutex;
 	std::mutex smokes_mutex;
 
-	std::for_each(std::execution::par, rockets.begin(), rockets.end(), [&](Rocket& rocket)
+	split_task(rockets, [&](Rocket& rocket)
 	{
+
 		rocket.tick();
 		vec2 position = rocket.position;
 		vec2 grid_pos = position / cellsize;
