@@ -47,8 +47,8 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 
 vector<Tank*> grid[65][35];
 
-//const unsigned int thread_count = thread::hardware_concurrency() * 2;
-const unsigned int thread_count = 4;
+const unsigned int thread_count = thread::hardware_concurrency() * 2;
+//const unsigned int thread_count = 4;
 
 ThreadPool pool(thread_count);
 
@@ -197,8 +197,6 @@ void Game::update(float deltaTime)
 	if (frame_count == 0)
 	{
 		set_tank_route();
-		//pool.enqueue([&]() {update_grid(); });
-		//set_tank_route();
 		update_grid();
 
 	}
@@ -216,12 +214,15 @@ void Game::update(float deltaTime)
 }
 
 void Game::set_tank_route() {
-	split_task(tanks_alive, [&](Tank& tank) {tank.set_route(background_terrain.get_route_Astar(tank, tank.target)); });
+	split_task(tanks_alive, [&](Tank& tank) {
+		tank.set_route(background_terrain.get_route_Astar(tank, tank.target)); 
+	});
 }
 
 
 // Function for updating grid
 void Game::update_grid() {
+
 	//Clear grid
 	for (int x = 0; x < 65; x++){
 		for (int y = 0; y < 35; y++){
@@ -256,15 +257,16 @@ void Game::split_task(Y& objects, X task) {
 	for (int i = 0; i < chunk_count; i++) {
 		if (i == chunk_count - 1) {
 			
-			int rest = chunk_size + (total % chunk_count);
+			rest = total % chunk_count;
 		}
 
-		futures.push_back(pool.enqueue([&, chunk_size, i]() {
+		futures.push_back(
+		pool.enqueue([&, chunk_size, i, rest]() {
 			for (int x = chunk_size * i; x < i * chunk_size + chunk_size + rest; x++) {
 				auto& object = objects[x];
 				task(object);
-			}
-			}));
+		}
+		}));	
 	}
 	for (std::future<void> &f : futures) {
 		f.get();
@@ -404,7 +406,7 @@ void Game::update_rockets() {
 
 	//Disable rockets if they collide with the "forcefield"
 	//Hint: A point to convex hull intersection test might be better here? :) (Disable if outside)
-	std::for_each(std::execution::par, rockets.begin(), rockets.end(), [&](Rocket& rocket){
+	split_task(rockets, [&](Rocket& rocket){
 		if (rocket.active)
 		{
 			for (size_t i = 0; i < forcefield_hull.size(); i++)
