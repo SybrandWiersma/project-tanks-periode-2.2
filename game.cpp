@@ -52,6 +52,36 @@ const unsigned int thread_count = thread::hardware_concurrency() * 2;
 
 ThreadPool pool(thread_count);
 
+static timer set_tank_route_timer;
+static float set_tank_route_time = 0;
+
+static timer update_grid_timer;
+static float update_grid_time = 0;
+
+static timer check_collisions_timer;
+static float check_collisions_time = 0;
+
+static timer update_tank_timer;
+static float update_tank_time = 0;
+
+static timer update_smokes_timer;
+static float update_smokes_time = 0;
+
+static timer update_rockets_timer;
+static float update_rockets_time = 0;
+
+static timer update_forcefield_timer;
+static float update_forcefield_time = 0;
+
+static timer update_particle_beam_timer;
+static float update_particle_beam_time = 0;
+
+static timer update_explosions_timer;
+static float update_explosions_time = 0;
+
+static timer total_update_timer;
+static float total_update_time = 0;
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -191,26 +221,48 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
+	total_update_timer.reset();
+
+
 	//Calculate the route to the destination for each tank using BFS
 	//Initializing routes here so it gets counted for performance..
-
 	if (frame_count == 0)
 	{
+		set_tank_route_timer.reset();
 		set_tank_route();
+		set_tank_route_time += set_tank_route_timer.elapsed();
+		update_grid_timer.reset();
 		update_grid();
+		update_grid_time += update_grid_timer.elapsed();
 
 	}
 
+	check_collisions_timer.reset();
 	check_collisions();
+	check_collisions_time += check_collisions_timer.elapsed();
+	update_tank_timer.reset();
 	update_tank();
+	update_tank_time += update_tank_timer.elapsed();
+	update_grid_timer.reset();
 	update_grid();
+	update_grid_time += update_grid_timer.elapsed();
+	update_smokes_timer.reset();
 	update_smokes();
+	update_smokes_time += update_smokes_timer.elapsed();
+	update_rockets_timer.reset();
 	update_rockets();
+	update_rockets_time += update_rockets_timer.elapsed();
+	update_forcefield_timer.reset();
 	update_forcefield();
+	update_forcefield_time += update_forcefield_timer.elapsed();
+	update_particle_beam_timer.reset();
 	update_particle_beam();
+	update_particle_beam_time += update_particle_beam_timer.elapsed();
+	update_explosions_timer.reset();
 	update_explosions();
+	update_explosions_time += update_explosions_timer.elapsed();
 
-
+	total_update_time += total_update_timer.elapsed();
 }
 
 void Game::set_tank_route() {
@@ -671,6 +723,17 @@ void Tmpl8::Game::measure_performance()
 		{
 			duration = perf_timer.elapsed();
 			cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
+			cout << (int)total_update_time << endl;
+			cout << (int)set_tank_route_time << endl;
+			cout << (int)update_grid_time << endl;
+			cout << (int)check_collisions_time << endl;
+			cout << (int)update_tank_time << endl;
+			cout << (int)update_smokes_time << endl;
+			cout << (int)update_rockets_time << endl;
+			cout << (int)update_forcefield_time << endl;
+			cout << (int)update_particle_beam_time << endl;
+			cout << (int)update_explosions_time << endl;
+
 			lock_update = true;
 		}
 
