@@ -47,8 +47,8 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 
 vector<Tank*> grid[65][35];
 
-const unsigned int thread_count = thread::hardware_concurrency() * 2;
-//const unsigned int thread_count = 4;
+const unsigned int thread_count = thread::hardware_concurrency();
+//const unsigned int thread_count = 1;
 
 ThreadPool pool(thread_count);
 
@@ -548,25 +548,6 @@ void Game::update_particle_beam() {
 	}
 
 	tanks_alive.erase(remove_if(tanks_alive.begin(), tanks_alive.end(), [](const Tank& tank) { return !tank.active; }), tanks_alive.end());
-	/*
-	//Update particle beams
-	for (Particle_beam& particle_beam : particle_beams)
-	{
-		particle_beam.tick(tanks);
-
-		//Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
-		for (Tank& tank : tanks)
-		{
-			if (tank.active && particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
-			{
-				if (tank.hit(particle_beam.damage))
-				{
-					smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
-				}
-			}
-		}
-	}
-	*/
 }
 
 void Game::update_explosions() {
