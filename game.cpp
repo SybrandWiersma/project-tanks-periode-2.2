@@ -296,6 +296,8 @@ void Game::update_grid() {
 	}
 }
 
+
+// Function that devides a task that needs to be done by a lot of objects in a list concurrently. 
 template <class X, typename Y>
 void Game::split_task(Y& objects, X task) {
 	int total = objects.size();
@@ -320,6 +322,7 @@ void Game::split_task(Y& objects, X task) {
 		}
 		}));	
 	}
+	pool.run_pending_task();
 	for (std::future<void> &f : futures) {
 		f.get();
 	}

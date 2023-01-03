@@ -78,11 +78,11 @@ namespace Tmpl8
             for (size_t x = 0; x < tiles.at(y).size(); x++)
             {
                 if (is_accessible(y, x)) {
-                    tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
-                    tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
-                    tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
-                    tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
-
+                    for (int i = 0; i < astar_data_count; i++)
+                    {
+                        tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
+                    }
+                    
                     tiles.at(y).at(x).position_x = x;
                     tiles.at(y).at(x).position_y = y;
 
@@ -93,10 +93,10 @@ namespace Tmpl8
                 }
             }
         }
-        terrain_astar_data.push_back(true);
-        terrain_astar_data.push_back(true);
-        terrain_astar_data.push_back(true);
-        terrain_astar_data.push_back(true);
+        for (int i = 0; i < astar_data_count; i++)
+        {
+            terrain_astar_data.push_back(true);
+        }
     }
 
     void Terrain::update()

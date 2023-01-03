@@ -62,7 +62,8 @@ namespace Tmpl8
         static constexpr size_t terrain_width = 80;
         static constexpr size_t terrain_height = 45;
 
-        vector<bool> terrain_astar_data;
+        static constexpr size_t astar_data_count = 16;
+        std::vector<bool> terrain_astar_data;
         std::mutex astar_data_mutex;
 
         std::unique_ptr<Surface> grass_img;
