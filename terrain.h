@@ -23,13 +23,12 @@ namespace Tmpl8
     private:
     };
 
-
     class TerrainTile
     {
     public:
         vector<TerrainTile*> neighbours;
         
-        vector<AstarData> data;
+        vector<AstarData> astar_data;
         size_t position_x;
         size_t position_y;
 
@@ -62,8 +61,8 @@ namespace Tmpl8
         static constexpr size_t terrain_width = 80;
         static constexpr size_t terrain_height = 45;
 
-        static constexpr size_t astar_data_count = 16;
-        std::vector<bool> terrain_astar_data;
+        const int astar_data_count = thread::hardware_concurrency();
+        std::vector<bool> astar_data_available;
         std::mutex astar_data_mutex;
 
         std::unique_ptr<Surface> grass_img;

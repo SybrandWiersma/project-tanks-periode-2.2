@@ -80,7 +80,7 @@ namespace Tmpl8
                 if (is_accessible(y, x)) {
                     for (int i = 0; i < astar_data_count; i++)
                     {
-                        tiles.at(y).at(x).data.push_back(AstarData(INT_MAX, INT_MAX));
+                        tiles.at(y).at(x).astar_data.push_back(AstarData(INT_MAX, INT_MAX));
                     }
                     
                     tiles.at(y).at(x).position_x = x;
@@ -95,7 +95,7 @@ namespace Tmpl8
         }
         for (int i = 0; i < astar_data_count; i++)
         {
-            terrain_astar_data.push_back(true);
+            astar_data_available.push_back(true);
         }
     }
 
@@ -147,10 +147,10 @@ namespace Tmpl8
         bool data_available = false;
         while (!data_available) {
             std::lock_guard<std::mutex> guard(astar_data_mutex);
-            for (int i = 0; i < terrain_astar_data.size(); i++) {
-                if (terrain_astar_data[i] == true) {
+            for (int i = 0; i < astar_data_available.size(); i++) {
+                if (astar_data_available[i] == true) {
                     data_nr = i;
-                    terrain_astar_data[i] = false;
+                    astar_data_available[i] = false;
                     data_available = true;
                     break;
                 }
@@ -168,7 +168,7 @@ namespace Tmpl8
         const size_t target_y = target.y / sprite_size;
         TerrainTile* start_tile = &tiles.at(pos_y).at(pos_x);
         TerrainTile* current_tile = start_tile;
-        current_tile->data[data_nr].travelcost = 0;
+        current_tile->astar_data[data_nr].travelcost = 0;
         unvisited.emplace_back(current_tile);
         bool route_found = FALSE;
 
@@ -177,7 +177,7 @@ namespace Tmpl8
             int position = unvisited.size() - 1;
 
             for (int i = 0; i < unvisited.size(); i++){
-                if (unvisited.at(i)->data[data_nr].distance_to_destination_sqr < closest_tile->data[data_nr].distance_to_destination_sqr) {
+                if (unvisited.at(i)->astar_data[data_nr].distance_to_destination_sqr < closest_tile->astar_data[data_nr].distance_to_destination_sqr) {
                     closest_tile = unvisited.at(i);
                     position = i;
                 }
@@ -186,19 +186,19 @@ namespace Tmpl8
             current_tile = closest_tile;
 
             for (TerrainTile* neighbour_tile : current_tile->neighbours) {
-                if (neighbour_tile->data[data_nr].visited)
+                if (neighbour_tile->astar_data[data_nr].visited)
                     continue;
                 int pos_y = neighbour_tile->position_y;
                 int pos_x = neighbour_tile->position_x;
                 int distance_sqr = (target_y - pos_y) * (target_y - pos_y) + (target_x - pos_x) * (target_x - pos_x);
                 if (distance_sqr == 0)
                     route_found = TRUE;
-                neighbour_tile->data[data_nr].distance_to_destination_sqr = distance_sqr;
-                neighbour_tile->data[data_nr].travelcost = current_tile->data[data_nr].travelcost + 1;
+                neighbour_tile->astar_data[data_nr].distance_to_destination_sqr = distance_sqr;
+                neighbour_tile->astar_data[data_nr].travelcost = current_tile->astar_data[data_nr].travelcost + 1;
                 unvisited.emplace_back(neighbour_tile);
             }
 
-            current_tile->data[data_nr].visited = TRUE;
+            current_tile->astar_data[data_nr].visited = TRUE;
             visited.push_back(current_tile);
             
         }
@@ -207,25 +207,25 @@ namespace Tmpl8
             route.push_back(vec2((float)current_tile->position_x * sprite_size, (float)current_tile->position_y * sprite_size));
             int lowest_cost = INT_MAX;
             for (TerrainTile* tile : current_tile->neighbours) {
-                if (tile->data[data_nr].travelcost < lowest_cost) {
-                    lowest_cost = tile->data[data_nr].travelcost;
+                if (tile->astar_data[data_nr].travelcost < lowest_cost) {
+                    lowest_cost = tile->astar_data[data_nr].travelcost;
                     current_tile = tile;
                 }
             }
         }
         for (TerrainTile* tile : visited) {
-            tile->data[data_nr].travelcost = INT_MAX;
-            tile->data[data_nr].distance_to_destination_sqr = INT_MAX;
-            tile->data[data_nr].visited = FALSE;
+            tile->astar_data[data_nr].travelcost = INT_MAX;
+            tile->astar_data[data_nr].distance_to_destination_sqr = INT_MAX;
+            tile->astar_data[data_nr].visited = FALSE;
         }
         for (TerrainTile* tile : unvisited) {
-            tile->data[data_nr].travelcost = INT_MAX;
-            tile->data[data_nr].distance_to_destination_sqr = INT_MAX;
-            tile->data[data_nr].visited = FALSE;
+            tile->astar_data[data_nr].travelcost = INT_MAX;
+            tile->astar_data[data_nr].distance_to_destination_sqr = INT_MAX;
+            tile->astar_data[data_nr].visited = FALSE;
         }
         {
             std::lock_guard<std::mutex> guard(astar_data_mutex);
-            terrain_astar_data[data_nr] = true;
+            astar_data_available[data_nr] = true;
         }
         return route;
     }
