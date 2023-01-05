@@ -54,6 +54,11 @@ class Game
     vector<Explosion> explosions;
     vector<Particle_beam> particle_beams;
 
+    std::mutex explosions_mutex;
+    std::mutex tanks_dead_mutex;
+    std::mutex smokes_mutex;
+    std::mutex rocket_mutex;
+
     Terrain background_terrain;
     std::vector<vec2> forcefield_hull;
 

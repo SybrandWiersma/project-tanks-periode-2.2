@@ -374,7 +374,6 @@ void Game::check_collisions() {
 
 // Function for updating tanks
 void Game::update_tank() {
-	std::mutex rocket_mutex;
 	split_task(tanks_alive, [&](Tank& tank) {
 		//Move tanks according to speed and nudges (see above) also reload
 		tank.tick(background_terrain);
@@ -402,13 +401,8 @@ void Game::update_smokes() {
 
 // Function for updating rockets
 void Game::update_rockets() {
-	std::mutex explosions_mutex;
-	std::mutex tanks_dead_mutex;
-	std::mutex smokes_mutex;
-
 	split_task(rockets, [&](Rocket& rocket)
 	{
-
 		rocket.tick();
 		vec2 position = rocket.position;
 		vec2 grid_pos = position / cellsize;
