@@ -71,6 +71,9 @@ static float update_explosions_time = 0;
 static timer total_update_timer;
 static float total_update_time = 0;
 
+static timer sort_health_timer;
+static float sort_health_time = 0;
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -360,6 +363,7 @@ void Game::update(float deltaTime)
 // -----------------------------------------------------------
 void Game::draw()
 {
+    total_update_timer.reset();
     // clear the graphics window
     screen->clear(0);
 
@@ -410,12 +414,14 @@ void Game::draw()
         const int NUM_TANKS = ((t < 1) ? num_tanks_blue : num_tanks_red);
 
         const int begin = ((t < 1) ? 0 : num_tanks_blue);
+        sort_health_timer.reset();
         std::vector<const Tank*> sorted_tanks;
         insertion_sort_tanks_health(tanks, sorted_tanks, begin, begin + NUM_TANKS);
         sorted_tanks.erase(std::remove_if(sorted_tanks.begin(), sorted_tanks.end(), [](const Tank* tank) { return !tank->active; }), sorted_tanks.end());
-
+        sort_health_time += sort_health_timer.elapsed();
         draw_health_bars(sorted_tanks, t);
     }
+    total_update_time += total_update_timer.elapsed();
 }
 
 // -----------------------------------------------------------
@@ -506,6 +512,7 @@ void Tmpl8::Game::measure_performance()
             cout << (int)update_forcefield_time << endl;
             cout << (int)update_particle_beam_time << endl;
             cout << (int)update_explosions_time << endl;
+            cout << (int)sort_health_time << endl;
             lock_update = true;
         }
 
