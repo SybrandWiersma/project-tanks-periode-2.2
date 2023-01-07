@@ -78,8 +78,8 @@ static float update_particle_beam_time = 0;
 static timer update_explosions_timer;
 static float update_explosions_time = 0;
 
-static timer total_update_timer;
-static float total_update_time = 0;
+static timer sort_health_timer;
+static float sort_health_time = 0;
 
 // -----------------------------------------------------------
 // Initialize the simulation state
@@ -218,9 +218,6 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
-    total_update_timer.reset();
-
-
     //Calculate the route to the destination for each tank using BFS
     //Initializing routes here so it gets counted for performance..
     if (frame_count == 0)
@@ -234,7 +231,6 @@ void Game::update(float deltaTime)
         update_grid_timer.reset();
         update_grid();
         update_grid_time += update_grid_timer.elapsed();
-
     }
 
     check_collisions_timer.reset();
@@ -261,8 +257,6 @@ void Game::update(float deltaTime)
     update_explosions_timer.reset();
     update_explosions();
     update_explosions_time += update_explosions_timer.elapsed();
-
-    total_update_time += total_update_timer.elapsed();
 }
 
 // Function for updating grid
@@ -520,6 +514,7 @@ void Game::update_explosions() {
 // -----------------------------------------------------------
 void Game::draw()
 {
+
     // clear the graphics window
     screen->clear(0);
 
@@ -559,7 +554,6 @@ void Game::draw()
     }
 
     //Draw forcefield (mostly for debugging, its kinda ugly..)
-    
     for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);
@@ -569,22 +563,22 @@ void Game::draw()
         screen->line(line_start, line_end, 0x0000ff);
     }
     
-
-    
-
-
     //Draw sorted health bars
     for (int t = 0; t < 2; t++)
     {
         const int NUM_TANKS = ((t < 1) ? num_tanks_blue : num_tanks_red);
 
         const int begin = ((t < 1) ? 0 : num_tanks_blue);
+        sort_health_timer.reset();
         vector<int> tanks_hp;  
         for (Tank &tank : tanks_alive)
             if((t == 0 && tank.allignment == BLUE) || (t == 1 && tank.allignment == RED))
             tanks_hp.push_back(tank.get_health());
+        //sort(tanks_hp.begin(), tanks_hp.end());
+
         
         CountSort(tanks_hp);
+        sort_health_time += sort_health_timer.elapsed();
         draw_health_bars(tanks_hp, t);
     }
 }
@@ -656,7 +650,6 @@ void Tmpl8::Game::measure_performance()
         {
             duration = perf_timer.elapsed();
             cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
-            cout << (int)total_update_time << endl;
             cout << (int)set_tank_route_time << endl;
             cout << (int)update_grid_time << endl;
             cout << (int)check_collisions_time << endl;
@@ -666,6 +659,7 @@ void Tmpl8::Game::measure_performance()
             cout << (int)update_forcefield_time << endl;
             cout << (int)update_particle_beam_time << endl;
             cout << (int)update_explosions_time << endl;
+            cout << (int)sort_health_time << endl;
             lock_update = true;
         }
 
