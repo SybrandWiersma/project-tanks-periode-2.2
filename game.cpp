@@ -48,39 +48,7 @@ const float rockets_max_edge = (tank_radius + rocket_radius) / 20;
 vector<Tank*> grid[65][35];
 
 const unsigned int thread_count = thread::hardware_concurrency();
-//const unsigned int thread_count = 1;
-
 ThreadPool pool(thread_count);
-
-static timer set_tank_route_timer;
-static float set_tank_route_time = 0;
-
-static timer update_grid_timer;
-static float update_grid_time = 0;
-
-static timer check_collisions_timer;
-static float check_collisions_time = 0;
-
-static timer update_tank_timer;
-static float update_tank_time = 0;
-
-static timer update_smokes_timer;
-static float update_smokes_time = 0;
-
-static timer update_rockets_timer;
-static float update_rockets_time = 0;
-
-static timer update_forcefield_timer;
-static float update_forcefield_time = 0;
-
-static timer update_particle_beam_timer;
-static float update_particle_beam_time = 0;
-
-static timer update_explosions_timer;
-static float update_explosions_time = 0;
-
-static timer sort_health_timer;
-static float sort_health_time = 0;
 
 // -----------------------------------------------------------
 // Initialize the simulation state
@@ -90,7 +58,6 @@ static float sort_health_time = 0;
 void Game::init()
 {
 	frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
-
 
 	int total_num_tanks = num_tanks_blue + num_tanks_red;
 	tanks_alive.reserve(total_num_tanks);
@@ -196,7 +163,9 @@ void Game::check_closest(vector<Tank*>& tanks, Tank& current_tank, Tank*& closes
 	for (Tank* tank : tanks) {
 		if (tank->allignment == current_tank.allignment)
 			continue;
+
 		float sqr_dist = fabsf((tank->get_position() - current_tank.get_position()).sqr_length());
+
 		if (sqr_dist < closest_distance)
 		{
 			closest_distance = sqr_dist;
@@ -225,39 +194,17 @@ void Game::update(float deltaTime)
 	//Initializing routes here so it gets counted for performance..
 	if (frame_count == 0)
 	{
-		set_tank_route_timer.reset();
 		set_tank_route();
-		set_tank_route_time += set_tank_route_timer.elapsed();
-		update_grid_timer.reset();
 		update_grid();
-		update_grid_time += update_grid_timer.elapsed();
-
 	}
-
-	check_collisions_timer.reset();
 	check_collisions();
-	check_collisions_time += check_collisions_timer.elapsed();
-	update_tank_timer.reset();
 	update_tank();
-	update_tank_time += update_tank_timer.elapsed();
-	update_grid_timer.reset();
 	update_grid();
-	update_grid_time += update_grid_timer.elapsed();
-	update_smokes_timer.reset();
 	update_smokes();
-	update_smokes_time += update_smokes_timer.elapsed();
-	update_rockets_timer.reset();
 	update_rockets();
-	update_rockets_time += update_rockets_timer.elapsed();
-	update_forcefield_timer.reset();
 	update_forcefield();
-	update_forcefield_time += update_forcefield_timer.elapsed();
-	update_particle_beam_timer.reset();
 	update_particle_beam();
-	update_particle_beam_time += update_particle_beam_timer.elapsed();
-	update_explosions_timer.reset();
 	update_explosions();
-	update_explosions_time += update_explosions_timer.elapsed();
 }
 
 void Game::set_tank_route() {
@@ -266,10 +213,8 @@ void Game::set_tank_route() {
 	});
 }
 
-
 // Function for updating grid
 void Game::update_grid() {
-
 	//Clear grid
 	for (int x = 0; x < 65; x++){
 		for (int y = 0; y < 35; y++){
@@ -290,7 +235,6 @@ void Game::update_grid() {
 		
 	}
 }
-
 
 // Function that devides a task that needs to be done by a lot of objects in a list concurrently. 
 template <class X, typename Y>
@@ -342,8 +286,6 @@ void Game::check_collisions() {
 		if (from_edge_y > (1 - collision_max_edge))
 			y_max++;
 
-
-
 		for (int i = x; i <= x_max; i++) {
 			for (int j = y; j <= y_max; j++) {
 				for (Tank* other_tank : grid[i][j])
@@ -363,7 +305,6 @@ void Game::check_collisions() {
 				}
 			}
 		}
-			
 	});
 }
 
@@ -383,15 +324,12 @@ void Game::update_tank() {
 			}
 			tank.reload_rocket();
 		}
-
 	});
 }
 
 // Function for updating smoke plumes
 void Game::update_smokes() {
-
 	split_task(smokes, [](Smoke& smoke) {smoke.tick(); });
-
 }
 
 // Function for updating rockets
@@ -468,8 +406,6 @@ void Game::update_rockets() {
 		}
 	});
 
-
-
 	//Remove exploded rockets with remove erase idiom
 	rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
 }
@@ -495,7 +431,6 @@ void Game::update_forcefield() {
 	//Calculate convex hull for 'rocket barrier'
 	for (Tank& tank : tanks_alive)
 	{
-
 		forcefield_hull.push_back(point_on_hull);
 		vec2 endpoint = tanks_alive.at(0).position;
 
@@ -552,11 +487,6 @@ void Game::update_explosions() {
 	explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
 }
 
-
-
-
-
-
 // -----------------------------------------------------------
 // Draw all sprites to the screen
 // (It is not recommended to multi-thread this function)
@@ -602,7 +532,6 @@ void Game::draw()
 	}
 
 	//Draw forcefield (mostly for debugging, its kinda ugly..)
-
 	for (size_t i = 0; i < forcefield_hull.size(); i++)
 	{
 		vec2 line_start = forcefield_hull.at(i);
@@ -612,24 +541,18 @@ void Game::draw()
 		screen->line(line_start, line_end, 0x0000ff);
 	}
 
-
-
-
-
 	//Draw sorted health bars
 	for (int t = 0; t < 2; t++)
 	{
 		const int NUM_TANKS = ((t < 1) ? num_tanks_blue : num_tanks_red);
-
 		const int begin = ((t < 1) ? 0 : num_tanks_blue);
-		sort_health_timer.reset();
 		vector<int> tanks_hp;
+
 		for (Tank& tank : tanks_alive)
 			if ((t == 0 && tank.allignment == BLUE) || (t == 1 && tank.allignment == RED))
 				tanks_hp.push_back(tank.get_health());
 
 		CountSort(tanks_hp);
-		sort_health_time += sort_health_timer.elapsed();
 		draw_health_bars(tanks_hp, t);
 	}
 }
@@ -698,17 +621,6 @@ void Tmpl8::Game::measure_performance()
 		{
 			duration = perf_timer.elapsed();
 			cout << "Duration was: " << duration << " (Replace REF_PERFORMANCE with this value)" << endl;
-			cout << (int)set_tank_route_time << endl;
-			cout << (int)update_grid_time << endl;
-			cout << (int)check_collisions_time << endl;
-			cout << (int)update_tank_time << endl;
-			cout << (int)update_smokes_time << endl;
-			cout << (int)update_rockets_time << endl;
-			cout << (int)update_forcefield_time << endl;
-			cout << (int)update_particle_beam_time << endl;
-			cout << (int)update_explosions_time << endl;
-			cout << (int)sort_health_time << endl;
-
 			lock_update = true;
 		}
 
