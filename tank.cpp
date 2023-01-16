@@ -98,6 +98,7 @@ void Tank::deactivate()
     active = false;
 }
 
+
 //Remove health
 bool Tank::hit(int hit_value)
 {

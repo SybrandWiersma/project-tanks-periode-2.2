@@ -425,10 +425,11 @@ void Game::update_rockets() {
 					if ((tank->allignment != rocket.allignment) && rocket.intersects(tank->position, tank->collision_radius))
 					{
 						{
+
 							std::lock_guard<std::mutex> guard(explosions_mutex);
 							explosions.push_back(Explosion(&explosion, tank->position));
 						}
-						if (tank->hit(rocket_hit_value))
+						if (tank->active && tank->hit(rocket_hit_value))
 						{
 							{
 								std::lock_guard<std::mutex> guard(tanks_dead_mutex);
