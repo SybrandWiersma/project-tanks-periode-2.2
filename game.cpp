@@ -390,8 +390,10 @@ void Game::update_tank() {
 // Function for updating smoke plumes
 void Game::update_smokes() {
 
-	split_task(smokes, [](Smoke& smoke) {smoke.tick(); });
-
+	for (Smoke& smoke : smokes) {
+		smoke.tick();
+	}
+	
 }
 
 // Function for updating rockets
