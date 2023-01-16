@@ -387,7 +387,7 @@ void Game::update_rockets() {
                     {
                         explosions.push_back(Explosion(&explosion, tank->position));
 
-                        if (tank->hit(rocket_hit_value))
+                        if (tank->active && tank->hit(rocket_hit_value))
                         {
                             tanks_dead.push_back(*tank);
                             smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
