@@ -70,7 +70,7 @@ struct timer
     {
         auto diff = get() - start;
         auto duration_us = std::chrono::duration_cast<MicroSeconds>(diff);
-        return static_cast<float>(duration_us.count());
+        return static_cast<float>(duration_us.count()) / 1000.0f;
     }
     static inline TimePoint get()
     {

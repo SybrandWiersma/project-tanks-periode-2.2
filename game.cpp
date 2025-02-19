@@ -82,6 +82,8 @@ static float update_explosions_time = 0;
 static timer sort_health_timer;
 static float sort_health_time = 0;
 
+ofstream TimingResults("TimingResults.txt");
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -89,6 +91,8 @@ static float sort_health_time = 0;
 // -----------------------------------------------------------
 void Game::init()
 {
+	TimingResults << "Frame;Kendalls blue;Kendalls red;Sort time" << endl;
+
 	frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
 
@@ -555,10 +559,29 @@ void Game::update_explosions() {
 	explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
 }
 
+int countInversions(const std::vector<int>& arr) {
+	int inversions = 0;
+	int n = arr.size();
+	for (int i = 0; i < n; i++) {
+		for (int j = i + 1; j < n; j++) {
+			if (arr[i] > arr[j]) {
+				inversions++;
+			}
+		}
+	}
+	return inversions;
+}
 
+// Functie om Kendall's Tau te berekenen
+double kendallsTau(const std::vector<int>& arr) {
+	int n = arr.size();
+	int inversions = countInversions(arr);
+	if (n < 2) return 1.0; // Een lijst met 0 of 1 elementen is per definitie gesorteerd
 
-
-
+	int totalPairs = (n * (n - 1)) / 2;
+	double tau = 1.0 - (2.0 * inversions / totalPairs);
+	return tau;
+}
 
 // -----------------------------------------------------------
 // Draw all sprites to the screen
@@ -617,7 +640,9 @@ void Game::draw()
 
 
 
-
+	float sort_health_time_once = 0;
+	float kendalls_red;
+	float kendalls_blue;
 
 	//Draw sorted health bars
 	for (int t = 0; t < 2; t++)
@@ -625,16 +650,27 @@ void Game::draw()
 		const int NUM_TANKS = ((t < 1) ? num_tanks_blue : num_tanks_red);
 
 		const int begin = ((t < 1) ? 0 : num_tanks_blue);
-		sort_health_timer.reset();
+		
 		vector<int> tanks_hp;
 		for (Tank& tank : tanks_alive)
 			if ((t == 0 && tank.allignment == BLUE) || (t == 1 && tank.allignment == RED))
 				tanks_hp.push_back(tank.get_health());
 
+		if (t == 0) {
+			kendalls_blue = kendallsTau(tanks_hp);
+		}
+		else if (t == 1) {
+			kendalls_red = kendallsTau(tanks_hp);
+		}	
+
+		sort_health_timer.reset();
+
 		CountSort(tanks_hp);
 		sort_health_time += sort_health_timer.elapsed();
+		sort_health_time_once += sort_health_timer.elapsed();
 		draw_health_bars(tanks_hp, t);
 	}
+	TimingResults << frame_count << ";" << kendalls_blue << ";" << kendalls_red << ";" << sort_health_time_once << endl;
 }
 
 void Game::CountSort(vector<int>& a)
