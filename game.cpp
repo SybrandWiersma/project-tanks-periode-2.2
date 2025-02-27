@@ -583,6 +583,259 @@ double kendallsTau(const std::vector<int>& arr) {
 	return tau;
 }
 
+
+void insertionSort(std::vector<int>& a) {
+	int n = a.size();
+	for (int i = 1; i < n; ++i) {
+		int key = a[i];
+		int j = i - 1;
+
+		// Move elements of a[0..i-1] that are greater than key one position ahead
+		while (j >= 0 && a[j] > key) {
+			a[j + 1] = a[j];
+			j--;
+		}
+		a[j + 1] = key;
+	}
+}
+
+int partition(vector<int>& arr, int low, int high) {
+
+	// Choose the pivot
+	int pivot = arr[high];
+
+	// Index of smaller element and indicates 
+	// the right position of pivot found so far
+	int i = low - 1;
+
+	// Traverse arr[low..high] and move all smaller
+	// elements on left side. Elements from low to 
+	// i are smaller after every iteration
+	for (int j = low; j <= high - 1; j++) {
+		if (arr[j] < pivot) {
+			i++;
+			swap(arr[i], arr[j]);
+		}
+	}
+
+	// Move pivot after smaller elements and
+	// return its position
+	swap(arr[i + 1], arr[high]);
+	return i + 1;
+}
+
+// The QuickSort function implementation
+void quickSort(vector<int>& arr, int low, int high) {
+
+	if (low < high) {
+
+		// pi is the partition return index of pivot
+		int pi = partition(arr, low, high);
+
+		// Recursion calls for smaller elements
+		// and greater or equals elements
+		quickSort(arr, low, pi - 1);
+		quickSort(arr, pi + 1, high);
+	}
+}
+
+int getMax(int arr[], int n)
+{
+	int mx = arr[0];
+	for (int i = 1; i < n; i++)
+		if (arr[i] > mx)
+			mx = arr[i];
+	return mx;
+}
+
+// A function to do counting sort of arr[]
+// according to the digit
+// represented by exp.
+void countSort(int arr[], int n, int exp)
+{
+
+	// Output array
+	int* output = new int[n];
+	int i, count[10] = { 0 };
+
+	// Store count of occurrences
+	// in count[]
+	for (i = 0; i < n; i++)
+		count[(arr[i] / exp) % 10]++;
+
+	// Change count[i] so that count[i]
+	// now contains actual position
+	// of this digit in output[]
+	for (i = 1; i < 10; i++)
+		count[i] += count[i - 1];
+
+	// Build the output array
+	for (i = n - 1; i >= 0; i--) {
+		output[count[(arr[i] / exp) % 10] - 1] = arr[i];
+		count[(arr[i] / exp) % 10]--;
+	}
+
+	// Copy the output array to arr[],
+	// so that arr[] now contains sorted
+	// numbers according to current digit
+	for (i = 0; i < n; i++)
+		arr[i] = output[i];
+}
+
+// The main function to that sorts arr[]
+// of size n using Radix Sort
+void radixsort(int arr[], int n)
+{
+
+	// Find the maximum number to
+	// know number of digits
+	int m = getMax(arr, n);
+
+	// Do counting sort for every digit.
+	// Note that instead of passing digit
+	// number, exp is passed. exp is 10^i
+	// where i is current digit number
+	for (int exp = 1; m / exp > 0; exp *= 10)
+		countSort(arr, n, exp);
+}
+
+// To heapify a subtree rooted with node i
+// which is an index in arr[].
+void heapify(vector<int>& arr, int n, int i) {
+
+	// Initialize largest as root
+	int largest = i;
+
+	// left index = 2*i + 1
+	int l = 2 * i + 1;
+
+	// right index = 2*i + 2
+	int r = 2 * i + 2;
+
+	// If left child is larger than root
+	if (l < n && arr[l] > arr[largest])
+		largest = l;
+
+	// If right child is larger than largest so far
+	if (r < n && arr[r] > arr[largest])
+		largest = r;
+
+	// If largest is not root
+	if (largest != i) {
+		swap(arr[i], arr[largest]);
+
+		// Recursively heapify the affected sub-tree
+		heapify(arr, n, largest);
+	}
+}
+
+// Main function to do heap sort
+void heapSort(vector<int>& arr) {
+	int n = arr.size();
+
+	// Build heap (rearrange vector)
+	for (int i = n / 2 - 1; i >= 0; i--)
+		heapify(arr, n, i);
+
+	// One by one extract an element from heap
+	for (int i = n - 1; i > 0; i--) {
+
+		// Move current root to end
+		swap(arr[0], arr[i]);
+
+		// Call max heapify on the reduced heap
+		heapify(arr, i, 0);
+	}
+}
+
+// An optimized version of Bubble Sort 
+void bubbleSort(vector<int>& arr) {
+	int n = arr.size();
+	bool swapped;
+
+	for (int i = 0; i < n - 1; i++) {
+		swapped = false;
+		for (int j = 0; j < n - i - 1; j++) {
+			if (arr[j] > arr[j + 1]) {
+				swap(arr[j], arr[j + 1]);
+				swapped = true;
+			}
+		}
+
+		// If no two elements were swapped, then break
+		if (!swapped)
+			break;
+	}
+}
+
+/* function to sort arr using shellSort */
+int shellSort(int arr[], int n)
+{
+	// Start with a big gap, then reduce the gap
+	for (int gap = n / 2; gap > 0; gap /= 2)
+	{
+		// Do a gapped insertion sort for this gap size.
+		// The first gap elements a[0..gap-1] are already in gapped order
+		// keep adding one more element until the entire array is
+		// gap sorted 
+		for (int i = gap; i < n; i += 1)
+		{
+			// add a[i] to the elements that have been gap sorted
+			// save a[i] in temp and make a hole at position i
+			int temp = arr[i];
+
+			// shift earlier gap-sorted elements up until the correct 
+			// location for a[i] is found
+			int j;
+			for (j = i; j >= gap && arr[j - gap] > temp; j -= gap)
+				arr[j] = arr[j - gap];
+
+			//  put temp (the original a[i]) in its correct location
+			arr[j] = temp;
+		}
+	}
+	return 0;
+}
+
+// Insertion sort function to sort individual buckets
+void insertionSort(vector<float>& bucket) {
+	for (int i = 1; i < bucket.size(); ++i) {
+		float key = bucket[i];
+		int j = i - 1;
+		while (j >= 0 && bucket[j] > key) {
+			bucket[j + 1] = bucket[j];
+			j--;
+		}
+		bucket[j + 1] = key;
+	}
+}
+
+// Function to sort arr[] of size n using bucket sort
+void bucketSort(int arr[], int n) {
+	// 1) Create n empty buckets
+	vector<int>* b = new vector<int>[n];
+
+	// 2) Put array elements in different buckets
+	for (int i = 0; i < n; i++) {
+		int bi = n * arr[i];
+		b[bi].push_back(arr[i]);
+	}
+
+	// 3) Sort individual buckets using insertion sort
+	for (int i = 0; i < n; i++) {
+		insertionSort(b[i]);
+	}
+
+	// 4) Concatenate all buckets into arr[]
+	int index = 0;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < b[i].size(); j++) {
+			arr[index++] = b[i][j];
+		}
+	}
+}
+
+
 // -----------------------------------------------------------
 // Draw all sprites to the screen
 // (It is not recommended to multi-thread this function)
@@ -664,7 +917,8 @@ void Game::draw()
 		}	
 
 		sort_health_timer.reset();
-
+		//quickSort(tanks_hp, 0, 1000);
+		//insertionSort(tanks_hp);
 		CountSort(tanks_hp);
 		sort_health_time += sort_health_timer.elapsed();
 		sort_health_time_once += sort_health_timer.elapsed();
@@ -688,6 +942,7 @@ void Game::CountSort(vector<int>& a)
 			a.emplace_back(i * 10);
 	}
 }
+
 
 
 
